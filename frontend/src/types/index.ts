@@ -119,6 +119,59 @@ export interface ModeConfig {
   created_at: string;
 }
 
+// ── Image Generation types ────────────────────────────────────────────────────
+
+export type VisualStyle = 'anime' | 'pixar' | 'pixel' | 'custom';
+export type ContentType = 'storytelling' | 'quote' | 'meme' | 'custom';
+export type AspectRatio = '1:1' | '4:3' | '16:9' | '9:16';
+
+export interface ImageSettings {
+  count: number;           // 1-10
+  visualStyle: VisualStyle;
+  contentType: ContentType;
+  customVisualPrompt: string;
+  customContentPrompt: string;
+  aspectRatio: AspectRatio;
+}
+
+export const defaultImageSettings: ImageSettings = {
+  count: 3,
+  visualStyle: 'anime',
+  contentType: 'storytelling',
+  customVisualPrompt: '',
+  customContentPrompt: '',
+  aspectRatio: '1:1'
+};
+
+export type ImageSlotStatus = 'empty' | 'loading' | 'done' | 'error';
+
+export interface ImageSlotState {
+  status: ImageSlotStatus;
+  dataUrl?: string;
+  prompt?: string;          // full Imagen prompt (pre-generated or post-generation)
+  concept?: string;         // short visual concept
+  caption?: string;         // punchy highlight sentence shown below image
+  error?: string;
+  prebuiltPrompt?: string;  // pre-generated prompt (ready to use for generation)
+  prebuiltConcept?: string; // pre-generated concept
+  prebuiltCaption?: string; // pre-generated caption
+}
+
+export interface GenerateImageResponse {
+  success: boolean;
+  image: {
+    base64: string;
+    mimeType: string;
+    dataUrl: string;
+    prompt: string;
+    concept: string;
+    visualStyle: VisualStyle;
+    contentType: ContentType;
+    aspectRatio: AspectRatio;
+    index: number;
+  };
+}
+
 // ── AI Agent types ────────────────────────────────────────────────────────────
 
 export interface AgentPost {
@@ -153,6 +206,33 @@ export interface AgentPostFormData {
   title: string;
   content: string;
   platform: string;
+}
+
+// ── Video Prompt Generation types ────────────────────────────────────────────
+
+export interface VideoSettings {
+  count: number;                // 1-10
+  visualStyle: VisualStyle;     // reuse image visual style type
+  contentType: ContentType;     // reuse image content type
+  customVisualPrompt: string;
+  customContentPrompt: string;
+}
+
+export const defaultVideoSettings: VideoSettings = {
+  count: 3,
+  visualStyle: 'anime',
+  contentType: 'storytelling',
+  customVisualPrompt: '',
+  customContentPrompt: '',
+};
+
+export type VideoSlotStatus = 'empty' | 'done';
+
+export interface VideoSlotState {
+  status: VideoSlotStatus;
+  veoPrompt?: string;
+  caption?: string;
+  index: number;
 }
 
 // ── App state ─────────────────────────────────────────────────────────────────

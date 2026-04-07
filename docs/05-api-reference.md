@@ -573,6 +573,100 @@ try {
 
 ---
 
+## POST /api/images/generate
+
+Tạo 1 ảnh minh họa từ nội dung humanized sử dụng Imagen 4 Fast.
+
+**Request**
+
+```http
+POST /api/images/generate
+Content-Type: application/json
+
+{
+  "text": "Nội dung bài viết đã humanize...",
+  "visualStyle": "anime",
+  "contentType": "storytelling",
+  "customVisualPrompt": "",
+  "customContentPrompt": "",
+  "aspectRatio": "1:1",
+  "index": 0,
+  "total": 3
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|-------|
+| `text` | string | ✓ | Nội dung bài viết (tối đa 10.000 ký tự) |
+| `visualStyle` | string | ✓ | `anime`, `pixar`, `pixel`, `custom` |
+| `contentType` | string | ✓ | `storytelling`, `quote`, `meme`, `custom` |
+| `customVisualPrompt` | string | khi style=custom | Prompt tùy chỉnh cho visual style |
+| `customContentPrompt` | string | khi type=custom | Prompt tùy chỉnh cho content type |
+| `aspectRatio` | string | | `1:1` (default), `4:3`, `16:9`, `9:16` |
+| `index` | number | | Vị trí slot (0-based), dùng để tạo variation |
+| `total` | number | | Tổng số ảnh đang tạo, dùng để gợi ý variation |
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "image": {
+    "base64": "iVBORw0KGgoAAAANSUhEUgAA...",
+    "mimeType": "image/png",
+    "dataUrl": "data:image/png;base64,iVBORw0...",
+    "prompt": "Anime style, soft colors...",
+    "concept": "A person standing at crossroads...",
+    "visualStyle": "anime",
+    "contentType": "storytelling",
+    "aspectRatio": "1:1",
+    "index": 0
+  }
+}
+```
+
+**Errors**
+
+| Status | Error | Nguyên nhân |
+|--------|-------|-------------|
+| 400 | `Invalid request` | Thiếu `text` hoặc rỗng |
+| 400 | `Invalid visualStyle` | Giá trị không hợp lệ |
+| 400 | `Invalid contentType` | Giá trị không hợp lệ |
+| 400 | `Invalid aspectRatio` | Giá trị không hợp lệ |
+| 400 | `Invalid request` | `customVisualPrompt` rỗng khi style=custom |
+| 500 | `Configuration error` | GEMINI_API_KEY chưa cấu hình |
+| 500 | `Model not available` | imagen-4.0-fast-generate-001 chưa được cấp quyền trên API key |
+
+**TypeScript Interfaces**
+
+```typescript
+interface ImageSettings {
+  count: number;              // 1-10 slots
+  visualStyle: 'anime' | 'pixar' | 'pixel' | 'custom';
+  contentType: 'storytelling' | 'quote' | 'meme' | 'custom';
+  customVisualPrompt: string;
+  customContentPrompt: string;
+  aspectRatio: '1:1' | '4:3' | '16:9' | '9:16';
+}
+
+interface GenerateImageResponse {
+  success: boolean;
+  image: {
+    base64: string;
+    mimeType: string;
+    dataUrl: string;
+    prompt: string;
+    concept: string;
+    visualStyle: string;
+    contentType: string;
+    aspectRatio: string;
+    index: number;
+  };
+}
+```
+
+---
+
 ## Giới Hạn & Constraints
 
 | Giới hạn | Giá trị | Lý do |

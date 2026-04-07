@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Zap, Activity, Bot } from 'lucide-react';
+import { Sparkles, Zap, Activity, Bot, Image, Film } from 'lucide-react';
 import TextInput from '@/components/TextInput';
 import SettingsPanel from '@/components/SettingsPanel';
 import OutputPanel from '@/components/OutputPanel';
@@ -9,6 +9,8 @@ import AnalysisPanel from '@/components/AnalysisPanel';
 import ComparisonView from '@/components/ComparisonView';
 import ActionButtons from '@/components/ActionButtons';
 import AgentManager from '@/components/AgentManager';
+import ImageGenerator from '@/components/ImageGenerator';
+import VideoGenerator from '@/components/VideoGenerator';
 import {
   humanizeText, humanizeTextStream, analyzeText, checkHealth,
   generateWithAgentStream, generateWithAgent
@@ -23,7 +25,7 @@ export default function Home() {
   const [scores, setScores] = useState<OutputScores | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isHumanizing, setIsHumanizing] = useState(false);
-  const [activeView, setActiveView] = useState<'output' | 'comparison' | 'analysis'>('output');
+  const [activeView, setActiveView] = useState<'output' | 'comparison' | 'analysis' | 'images' | 'videos'>('output');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
@@ -329,6 +331,30 @@ export default function Home() {
                 <Zap className="w-3.5 h-3.5" />
                 Compare
               </button>
+              <button
+                onClick={() => setActiveView('images')}
+                disabled={!humanizedText}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-lg text-xs font-medium border-b-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                  activeView === 'images'
+                    ? 'text-pink-400 border-pink-500 bg-pink-950/20'
+                    : 'text-gray-500 border-transparent hover:text-gray-400 hover:border-gray-700'
+                }`}
+              >
+                <Image className="w-3.5 h-3.5" />
+                Images
+              </button>
+              <button
+                onClick={() => setActiveView('videos')}
+                disabled={!humanizedText}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-lg text-xs font-medium border-b-2 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                  activeView === 'videos'
+                    ? 'text-cyan-400 border-cyan-500 bg-cyan-950/20'
+                    : 'text-gray-500 border-transparent hover:text-gray-400 hover:border-gray-700'
+                }`}
+              >
+                <Film className="w-3.5 h-3.5" />
+                Videos
+              </button>
             </div>
 
             {/* Panel content */}
@@ -352,6 +378,12 @@ export default function Home() {
                   originalText={inputText}
                   humanizedText={humanizedText}
                 />
+              )}
+              {activeView === 'images' && (
+                <ImageGenerator humanizedText={humanizedText} />
+              )}
+              {activeView === 'videos' && (
+                <VideoGenerator humanizedText={humanizedText} />
               )}
             </div>
           </div>

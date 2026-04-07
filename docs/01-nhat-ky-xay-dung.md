@@ -16,6 +16,83 @@
 
 ---
 
+## Cập Nhật Phiên Bản 3.0.0 — 2026-04-07 (Tính Năng: Tạo Ảnh AI)
+
+### Tổng Quan
+Thêm tính năng **Image Generation** — người dùng có thể tạo ảnh minh họa từ nội dung đã humanize sử dụng **Imagen 4 Fast** (`imagen-4.0-fast-generate-001`). Hỗ trợ logo watermark, chọn phong cách ảnh, và tạo từng ảnh độc lập.
+
+### Backend
+
+#### Service Mới: `imageService.js`
+- **`extractImageConcept(text, contentType)`**: Dùng Gemini 2.5 Flash để trích xuất ý tưởng hình ảnh từ nội dung text
+- **`buildImagenPrompt(...)`**: Xây dựng prompt chi tiết cho Imagen dựa trên visual style + content type
+- **`callImagen(prompt, aspectRatio)`**: Gọi REST API Imagen 4 Fast → trả về `{ base64, mimeType }`
+- **`generateImage(opts)`**: Orchestrator chính — extract concept → build prompt → call Imagen
+
+#### Endpoint Mới
+| Method | Path | Mô tả |
+|--------|------|-------|
+| POST | `/api/images/generate` | Tạo 1 ảnh cho 1 slot |
+
+**Request Body:**
+```json
+{
+  "text": "...",
+  "visualStyle": "anime|pixar|pixel|custom",
+  "contentType": "storytelling|quote|meme|custom",
+  "customVisualPrompt": "...",
+  "customContentPrompt": "...",
+  "aspectRatio": "1:1|4:3|16:9|9:16",
+  "index": 0,
+  "total": 3
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "image": {
+    "base64": "...",
+    "mimeType": "image/png",
+    "dataUrl": "data:image/png;base64,...",
+    "prompt": "...",
+    "concept": "...",
+    "visualStyle": "anime",
+    "contentType": "storytelling",
+    "aspectRatio": "1:1",
+    "index": 0
+  }
+}
+```
+
+### Frontend
+
+#### Component Mới: `ImageGenerator.tsx`
+- **Logo upload**: Người dùng upload logo → lưu dưới dạng dataUrl, hiển thị preview
+- **Settings panel**: Count slider (1-10), aspect ratio, visual style (Anime/Pixar/Pixel/Custom), content type (Storytelling/Quote/Meme/Custom)
+- **Custom prompts**: Hiển thị textarea khi chọn "Custom" cho style hoặc content type
+- **ImageSlot**: Component cho từng slot ảnh — trạng thái: empty/loading/done/error
+- **Per-slot generate**: Mỗi slot có nút "Generate" riêng → không tạo hàng loạt
+- **Canvas watermark**: Dùng HTML5 Canvas API để overlay logo bottom-right (18% width, 85% opacity)
+- **Download**: Nút tải ảnh về từng slot (sau khi đã overlay logo)
+
+#### Tab Mới trong `page.tsx`
+- Tab **"Images"** (màu hồng) xuất hiện bên cạnh Output/Analysis/Compare
+- Chỉ active khi đã có humanized text
+- Render `<ImageGenerator humanizedText={humanizedText} />`
+
+#### Quy Trình Người Dùng
+1. Humanize text → chuyển sang tab "Images"
+2. Upload logo (tùy chọn) → chọn số lượng ảnh
+3. Chọn visual style (Anime/Pixar/Pixel/Custom)
+4. Chọn content type (Storytelling/Quote/Meme/Custom)
+5. Chọn aspect ratio (1:1/4:3/16:9/9:16)
+6. Nhấn "Generate" từng slot → ảnh hiện ra với logo watermark
+7. Nhấn "Download" để tải ảnh về
+
+---
+
 ## Cập Nhật Phiên Bản 2.0.0 — 2026-04-04 (Tính Năng: AI Writing Agents)
 
 ### Tổng Quan

@@ -6,7 +6,10 @@ import {
   Agent,
   AgentFormData,
   AgentPost,
-  AgentPostFormData
+  AgentPostFormData,
+  ImageSettings,
+  GenerateImageResponse,
+  VideoSettings,
 } from '@/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
@@ -175,6 +178,69 @@ export function humanizeTextStream(
   return () => controller.abort();
 }
 
+// ── Image Generation API ──────────────────────────────────────────────────────
+
+export interface GeneratedPrompt {
+  concept: string;
+  caption: string;
+  prompt: string;
+  index: number;
+}
+
+export async function generateImagePrompts(
+  text: string,
+  settings: ImageSettings
+): Promise<{ success: boolean; prompts: GeneratedPrompt[] }> {
+  const response = await fetch(`${API_URL}/api/images/generate-prompts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      count: settings.count,
+      visualStyle: settings.visualStyle,
+      contentType: settings.contentType,
+      customVisualPrompt: settings.customVisualPrompt,
+      customContentPrompt: settings.customContentPrompt,
+      aspectRatio: settings.aspectRatio
+    })
+  });
+  return handleResponse(response);
+}
+
+export async function generateImage(
+  text: string,
+  settings: ImageSettings,
+  index: number,
+  prebuilt?: { prompt: string; concept: string }
+): Promise<GenerateImageResponse> {
+  const body = prebuilt
+    ? {
+        prompt: prebuilt.prompt,
+        concept: prebuilt.concept,
+        aspectRatio: settings.aspectRatio,
+        visualStyle: settings.visualStyle,
+        contentType: settings.contentType,
+        index
+      }
+    : {
+        text,
+        visualStyle: settings.visualStyle,
+        contentType: settings.contentType,
+        customVisualPrompt: settings.customVisualPrompt,
+        customContentPrompt: settings.customContentPrompt,
+        aspectRatio: settings.aspectRatio,
+        index,
+        total: settings.count
+      };
+
+  const response = await fetch(`${API_URL}/api/images/generate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+  return handleResponse<GenerateImageResponse>(response);
+}
+
 // ── AI Agent API ──────────────────────────────────────────────────────────────
 
 export async function listAgents(): Promise<{ success: boolean; agents: Agent[] }> {
@@ -302,6 +368,33 @@ export function generateWithAgentStream(
   })();
 
   return () => controller.abort();
+}
+
+// ── Video Prompt Generation API ───────────────────────────────────────────────
+
+export interface GeneratedVideoPrompt {
+  veoPrompt: string;
+  caption: string;
+  index: number;
+}
+
+export async function generateVideoPrompts(
+  text: string,
+  settings: VideoSettings
+): Promise<{ success: boolean; prompts: GeneratedVideoPrompt[] }> {
+  const response = await fetch(`${API_URL}/api/videos/generate-prompts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      text,
+      count: settings.count,
+      visualStyle: settings.visualStyle,
+      contentType: settings.contentType,
+      customVisualPrompt: settings.customVisualPrompt,
+      customContentPrompt: settings.customContentPrompt,
+    })
+  });
+  return handleResponse(response);
 }
 
 export { ApiError };

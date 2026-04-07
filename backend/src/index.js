@@ -3,6 +3,8 @@ const express = require('express');
 const cors = require('cors');
 const humanizeRoutes = require('./routes/humanize');
 const agentRoutes = require('./routes/agents');
+const imageRoutes = require('./routes/images');
+const videoRoutes = require('./routes/videos');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -27,6 +29,8 @@ app.use((req, res, next) => {
 // Routes
 app.use('/api', humanizeRoutes);
 app.use('/api/agents', agentRoutes);
+app.use('/api/images', imageRoutes);
+app.use('/api/videos', videoRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -77,7 +81,10 @@ app.listen(PORT, () => {
   console.log('  PUT  /api/agents/:id/posts/:pid   — Update post');
   console.log('  DELETE /api/agents/:id/posts/:pid — Delete post');
   console.log('  POST /api/agents/:id/generate     — Generate in agent style');
-  console.log('  POST /api/agents/:id/generate/stream — Generate (SSE)\n');
+  console.log('  POST /api/agents/:id/generate/stream — Generate (SSE)');
+  console.log('  POST /api/images/generate-prompts     — Generate prompts for N image slots');
+  console.log('  POST /api/images/generate             — Generate single image (Imagen 4 Fast)');
+  console.log('  POST /api/videos/generate-prompts     — Generate Veo3 video prompts\n');
 });
 
 module.exports = app;
