@@ -15,6 +15,7 @@ interface SettingsPanelProps {
   onChange: (settings: HumanizeSettings) => void;
   onOneClickHumanize?: (settings: HumanizeSettings) => void;
   disabled?: boolean;
+  agentActive?: boolean;
 }
 
 interface CollapsibleSectionProps {
@@ -156,7 +157,7 @@ const oneclickModes: { value: OneClickMode; label: string; emoji: string; color:
   { value: 'relatable', label: 'Make it Relatable', emoji: '❤️', color: 'from-emerald-600 to-teal-600' },
 ];
 
-export default function SettingsPanel({ settings, onChange, onOneClickHumanize, disabled = false }: SettingsPanelProps) {
+export default function SettingsPanel({ settings, onChange, onOneClickHumanize, disabled = false, agentActive = false }: SettingsPanelProps) {
   const update = (partial: Partial<HumanizeSettings>) => {
     onChange({ ...settings, ...partial });
   };
@@ -222,7 +223,21 @@ export default function SettingsPanel({ settings, onChange, onOneClickHumanize, 
   };
 
   return (
-    <div className="space-y-2 overflow-y-auto max-h-full">
+    <div className="relative space-y-2 overflow-y-auto max-h-full">
+      {/* Agent active overlay */}
+      {agentActive && (
+        <div className="absolute inset-0 z-10 bg-gray-950/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-3 p-4">
+          <div className="w-10 h-10 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center">
+            <span className="text-xl">🤖</span>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-sm font-semibold text-violet-300">AI Agent đang hoạt động</p>
+            <p className="text-xs text-gray-500 leading-relaxed">
+              Cài đặt bị tắt khi dùng Agent.<br />Tắt Agent để dùng cài đặt thủ công.
+            </p>
+          </div>
+        </div>
+      )}
       {/* One-Click Modes */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-1">

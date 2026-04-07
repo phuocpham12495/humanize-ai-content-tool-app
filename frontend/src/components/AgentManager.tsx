@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Bot, Plus, Trash2, Pencil, X, ChevronRight, ChevronDown,
-  FileText, Save, Loader2, BookOpen, Sparkles, Check, AlertCircle
+  FileText, Save, Loader2, BookOpen, Sparkles, Check, AlertCircle, Copy
 } from 'lucide-react';
 import {
   listAgents, getAgent, createAgent, updateAgent, deleteAgent,
@@ -183,6 +183,7 @@ function AgentDetail({
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState('');
   const [expandedPost, setExpandedPost] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const reload = useCallback(async () => {
     try {
@@ -326,6 +327,19 @@ function AgentDetail({
           <div className={`relative p-3 bg-gray-900/60 border rounded-xl text-sm text-gray-200 leading-relaxed whitespace-pre-wrap ${isGenerating ? 'border-emerald-600/50' : 'border-emerald-900/40'}`}>
             {generatedText}
             {isGenerating && <span className="inline-block w-0.5 h-4 bg-emerald-400 ml-0.5 animate-pulse align-middle" />}
+            {!isGenerating && generatedText && (
+              <button
+                onClick={async () => {
+                  await navigator.clipboard.writeText(generatedText);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+                className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-lg text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-400 hover:text-white transition-all"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Đã copy' : 'Copy'}
+              </button>
+            )}
           </div>
         )}
       </div>

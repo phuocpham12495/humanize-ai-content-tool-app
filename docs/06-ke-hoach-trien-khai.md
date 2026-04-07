@@ -215,3 +215,32 @@ Một feature được coi là hoàn thành khi:
 | Thời gian xử lý humanize | < 15 giây | Performance monitoring |
 | Tỷ lệ lỗi API | < 5% | Error logging |
 | User retention (dùng lại) | > 40% | Session tracking |
+
+---
+
+## 7. Tính Năng Đã Hoàn Thành (v4.0.0 — 2026-04-07)
+
+| Tính năng | Ưu tiên | Trạng thái | Ghi chú |
+|-----------|---------|-----------|---------|
+| Tạo ảnh AI (Imagen 4 Fast) | P0 | ✅ Done | Two-phase: generate prompts → generate images |
+| Logo watermark (Canvas API) | P1 | ✅ Done | Overlay góc dưới phải, 85% opacity |
+| Caption cho ảnh | P1 | ✅ Done | Punchy quote, copyable |
+| No-text rule cho ảnh | P0 | ✅ Done | Appended vào mọi Imagen prompt |
+| Video Prompt Generator (Veo3) | P1 | ✅ Done | Công thức chuẩn Veo3, 12 slots |
+| AI Agent CRUD | P0 | ✅ Done | Few-shot style transfer |
+| Agent isolation (no settings bleed) | P1 | ✅ Done | Pure style transfer |
+| SettingsPanel disable khi Agent active | P1 | ✅ Done | Frosted overlay |
+| Copy button trong Agent preview | P2 | ✅ Done | Copy generated text |
+| Max 12 ảnh/video | P2 | ✅ Done | Backend + frontend |
+| Streaming SSE (humanize + agent) | P0 | ✅ Done | AbortController cancel |
+| Diff view (ComparisonView) | P1 | ✅ Done | diff-match-patch word-level |
+
+## 8. Backlog (Chưa Implement)
+
+| Tính năng | Ưu tiên | Lý do chưa làm |
+|-----------|---------|----------------|
+| Veo3 API actual video generation | P1 | API chưa publicly available |
+| Export/import agent settings | P2 | Nice-to-have |
+| Batch humanize nhiều bài | P2 | Scope hiện tại: single post |
+| Auth / multi-user | P3 | Local tool, không cần |
+| Rate limiting | P2 | Chưa deploy production |

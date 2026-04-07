@@ -16,7 +16,61 @@
 
 ---
 
-## Cập Nhật Phiên Bản 3.0.0 — 2026-04-07 (Tính Năng: Tạo Ảnh AI)
+## Cập Nhật Phiên Bản 4.0.0 — 2026-04-07 (Tính Năng: Video Prompt Generator + Fixes)
+
+### Tổng Quan
+Thêm tính năng **Video Prompt Generator** — người dùng tạo prompt theo chuẩn Veo3 từ nội dung humanized. Đồng thời sửa nhiều lỗi UX quan trọng.
+
+### Tính Năng Mới: Video Prompt Generator
+
+#### Backend
+- `videoService.js` — dùng Gemini 2.5 Flash tạo N prompt theo công thức Veo3: `[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]`
+- Mỗi prompt có cinematography technique khác nhau (tracking shot, crane shot, close-up...) tùy content type
+- Kèm `caption` — câu quote ngắn, súc tích từ bài viết
+
+#### Route Mới (`/api/videos`)
+| Method | Path | Mô tả |
+|--------|------|-------|
+| POST | `/api/videos/generate-prompts` | Tạo N Veo3 prompt từ nội dung |
+
+#### Frontend: `VideoGenerator.tsx`
+- Collapsible **formula reference** — hiển thị công thức Veo3 đầy đủ
+- Count slider (1-12), Visual Style (Anime/Pixar/Pixel/Custom), Content Type (Kể chuyện/Quote/Meme/Custom)
+- Một nút **Generate Video Prompts** — tạo tất cả cùng lúc
+- Mỗi card: prompt monospace + nút **Copy Prompt** + caption quote
+- Tab **Videos** (màu cyan) trong right panel
+
+### Fixes & Improvements
+
+#### Fix: Generate prompt ảnh chưa hoạt động (Route 404)
+- Nguyên nhân: Backend cũ đang chạy, chưa load routes mới
+- Fix: Kill process cũ (PID), restart backend với code mới
+
+#### Fix: Caption cho ảnh
+- Mỗi slot ảnh có `caption` — câu nổi bật từ bài viết hiện dưới ảnh
+- Styled quote block (gradient tím, dấu `"`) với nút copy hover
+
+#### Fix: Hình ảnh không có text
+- Rewrite `CONTENT_TYPE_PROMPTS`: quote/meme không còn mô tả typography/font layout
+- Thêm constant `NO_TEXT_RULE` appended vào mọi prompt Imagen
+- Cập nhật Gemini concept-extraction để không suggest text trong ảnh
+
+#### Fix: Tăng max ảnh/video lên 12
+- Backend routes: `Math.min(12, count)`
+- Frontend sliders: `max={12}`
+
+#### Fix: AI Agent disable settings
+- Khi Agent active → overlay frosted xuất hiện trên toàn bộ SettingsPanel
+- Message: "🤖 AI Agent đang hoạt động — Tắt Agent để dùng cài đặt thủ công"
+- Agent generation không còn nhận `settings` từ humanize panel (pure style transfer)
+
+#### Fix: Copy button trong Agent preview
+- Nút Copy xuất hiện góc trên phải của preview text sau khi generate xong
+- Hiển thị "Đã copy ✓" 2 giây sau khi click
+
+---
+
+## Cập Nhật Phiên Bản 3.0.0 — 2026-04-07 (Tính Năng: Tạo Ảnh AI + Prompt Generator)
 
 ### Tổng Quan
 Thêm tính năng **Image Generation** — người dùng có thể tạo ảnh minh họa từ nội dung đã humanize sử dụng **Imagen 4 Fast** (`imagen-4.0-fast-generate-001`). Hỗ trợ logo watermark, chọn phong cách ảnh, và tạo từng ảnh độc lập.

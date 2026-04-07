@@ -667,11 +667,135 @@ interface GenerateImageResponse {
 
 ---
 
+## POST /api/images/generate-prompts
+
+Tạo concept + Imagen prompt cho N slot ảnh trong một lần gọi (dùng Gemini).
+
+**Request**
+
+```http
+POST /api/images/generate-prompts
+Content-Type: application/json
+
+{
+  "text": "Nội dung bài viết đã humanize...",
+  "count": 3,
+  "visualStyle": "anime",
+  "contentType": "storytelling",
+  "customVisualPrompt": "",
+  "customContentPrompt": "",
+  "aspectRatio": "1:1"
+}
+```
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "prompts": [
+    {
+      "concept": "A lone warrior standing at a cliff...",
+      "caption": "Chase your dreams before it's too late.",
+      "prompt": "A lone warrior... cinematic story scene... anime art style... No text...",
+      "index": 0
+    }
+  ]
+}
+```
+
+---
+
+## POST /api/videos/generate-prompts
+
+Tạo N Veo3-formatted video prompt sử dụng Gemini 2.5 Flash.  
+Prompt theo công thức: `[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]`
+
+**Request**
+
+```http
+POST /api/videos/generate-prompts
+Content-Type: application/json
+
+{
+  "text": "Nội dung bài viết đã humanize...",
+  "count": 3,
+  "visualStyle": "anime",
+  "contentType": "storytelling",
+  "customVisualPrompt": "",
+  "customContentPrompt": ""
+}
+```
+
+| Trường | Kiểu | Bắt buộc | Mô tả |
+|--------|------|----------|-------|
+| `text` | string | ✓ | Nội dung bài viết (tối đa 10.000 ký tự) |
+| `count` | number | | Số lượng prompt (1-12, default: 1) |
+| `visualStyle` | string | ✓ | `anime`, `pixar`, `pixel`, `custom` |
+| `contentType` | string | ✓ | `storytelling`, `quote`, `meme`, `custom` |
+| `customVisualPrompt` | string | khi style=custom | Prompt tùy chỉnh visual style |
+| `customContentPrompt` | string | khi type=custom | Prompt tùy chỉnh content type |
+
+**Response (200)**
+
+```json
+{
+  "success": true,
+  "prompts": [
+    {
+      "veoPrompt": "Tracking shot, a determined young musician, weaving through a vibrant market, pulling out their flute and playing passionately at a rooftop, sunset casting warm shadows, anime art style with cel-shading, Studio Ghibli atmosphere.",
+      "caption": "Chase your dreams before it's too late.",
+      "index": 0
+    }
+  ]
+}
+```
+
+**TypeScript Interfaces**
+
+```typescript
+interface VideoSettings {
+  count: number;              // 1-12
+  visualStyle: 'anime' | 'pixar' | 'pixel' | 'custom';
+  contentType: 'storytelling' | 'quote' | 'meme' | 'custom';
+  customVisualPrompt: string;
+  customContentPrompt: string;
+}
+
+interface GeneratedVideoPrompt {
+  veoPrompt: string;    // Full Veo3-formatted prompt
+  caption: string;      // Short punchy quote from the text (max 20 words)
+  index: number;        // 0-based slot index
+}
+```
+
+**Veo3 Prompt Formula**
+```
+[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]
+```
+- **Cinematography**: Medium shot, Tracking shot, Crane shot, Close-up, POV shot, Dolly shot...
+- **Subject**: Nhân vật hoặc focal point từ nội dung bài viết
+- **Action**: Hành động cụ thể, sống động
+- **Context**: Môi trường, bối cảnh, nền
+- **Style & Ambiance**: Visual style + mood + ánh sáng
+
+**Errors**
+
+| Status | Error | Nguyên nhân |
+|--------|-------|-------------|
+| 400 | `Invalid request` | Thiếu `text` hoặc rỗng |
+| 400 | `Invalid visualStyle` | Giá trị không hợp lệ |
+| 400 | `Invalid contentType` | Giá trị không hợp lệ |
+| 500 | `Configuration error` | GEMINI_API_KEY chưa cấu hình |
+
+---
+
 ## Giới Hạn & Constraints
 
 | Giới hạn | Giá trị | Lý do |
 |----------|---------|-------|
 | Độ dài văn bản tối đa | 10.000 ký tự | Tránh quá tải Gemini API |
+| Số lượng ảnh/video tối đa | 12 slot | Giới hạn backend route + frontend slider |
 | Content-Type | `application/json` | Chỉ JSON |
 | CORS origin | `localhost:3000` | Chỉ local dev |
 | Body size | 1MB | Express middleware limit |

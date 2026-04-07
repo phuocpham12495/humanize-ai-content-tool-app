@@ -75,13 +75,12 @@ export default function Home() {
           onStatus: () => {},
           onDone: t => { setHumanizedText(t); setIsHumanizing(false); },
           onError: () => {
-            generateWithAgent(selectedAgentId, inputText, settings)
+            generateWithAgent(selectedAgentId, inputText)
               .then(r => setHumanizedText(r.generatedText))
               .catch((e: any) => setError(e.message || 'Agent generation failed'))
               .finally(() => setIsHumanizing(false));
           }
-        },
-        settings
+        }
       );
       return;
     }
@@ -281,6 +280,7 @@ export default function Home() {
               onChange={setSettings}
               onOneClickHumanize={inputText.trim() ? handleOneClickHumanize : undefined}
               disabled={isAnalyzing || isHumanizing}
+              agentActive={!!selectedAgentId}
             />
           </aside>
 

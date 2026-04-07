@@ -359,3 +359,69 @@ SELECT * FROM session_history ORDER BY timestamp DESC LIMIT 5;
 # Xem configs:
 SELECT name, parameters_json FROM configs;
 ```
+
+---
+
+## Cập Nhật v4.0.0 — Luồng Tạo Ảnh & Video
+
+### Luồng Tạo Ảnh (Two-Phase)
+
+```
+page.tsx
+  └── ImageGenerator.tsx
+        ├── handleGeneratePrompts()   → POST /api/images/generate-prompts
+        │     └── imageService.generatePrompts()
+        │           └── Gemini: tạo N { concept, caption } → build N Imagen prompts
+        │     ← slots[i].prebuiltPrompt, prebuiltConcept, caption
+        │
+        └── handleGenerate(index)     → POST /api/images/generate
+              body: { prompt, concept, aspectRatio }  ← dùng prebuilt
+              └── imageService.generateImageFromPrompt()
+                    └── callImagen(prompt, aspectRatio)
+              ← base64 image → overlayLogo() (Canvas API) → slot.dataUrl
+```
+
+### Luồng Tạo Video Prompt (Single-Phase)
+
+```
+page.tsx
+  └── VideoGenerator.tsx
+        └── handleGenerate()          → POST /api/videos/generate-prompts
+              └── videoService.generateVideoPrompts()
+                    └── Gemini: tạo N { veoPrompt, caption }
+              ← slots[] với veoPrompt sẵn sàng copy
+```
+
+### Quy Tắc No-Text trong Ảnh
+
+Constant `NO_TEXT_RULE` trong `imageService.js` được append vào mọi Imagen prompt:
+```js
+const NO_TEXT_RULE = 'No text, no letters, no words, no captions, no watermarks, no typography, no writing of any kind in the image';
+```
+
+### Agent Isolation Pattern
+
+```tsx
+// page.tsx — khi agent active, KHÔNG pass settings:
+generateWithAgentStream(selectedAgentId, inputText, callbacks);
+// KHÔNG: generateWithAgentStream(selectedAgentId, inputText, callbacks, settings);
+
+// SettingsPanel.tsx — overlay khi agentActive:
+{agentActive && (
+  <div className="absolute inset-0 z-10 bg-gray-950/80 backdrop-blur-sm ...">
+    🤖 AI Agent đang hoạt động
+  </div>
+)}
+```
+
+### Kiểm tra Agents trong Database
+
+```bash
+sqlite3 backend/data/humanize.db
+
+# Xem agents:
+SELECT id, name, avatar_emoji, platform FROM agents;
+
+# Xem posts của agent:
+SELECT agent_id, title, substr(content,1,50) FROM agent_posts;
+```

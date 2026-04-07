@@ -217,3 +217,77 @@ Layer 5: Human Fingerprint (Quirks + signature phrases)
 | `api.ts` | API Client Pattern | Centralize HTTP calls, error handling |
 | Components | Controlled Components | Form state rõ ràng, predictable |
 | Settings | Props drilling + Lifting State Up | State ở page.tsx, pass xuống |
+| `imageService.js` | Two-Step Pipeline | Extract concept (Gemini) → Build prompt → Call Imagen |
+| `videoService.js` | Single-Step Generation | Gemini tạo Veo3 prompt trực tiếp (no image API call) |
+| `ImageGenerator.tsx` | Two-Phase UX | Generate Prompts → Generate Images (per slot) |
+| `VideoGenerator.tsx` | Single-Phase UX | Generate Prompts → Copy & use in Veo3 |
+| AgentManager | Overlay Disable Pattern | Frosted overlay khi Agent active → prevent settings conflict |
+
+---
+
+## ADR-007: Hai Giai Đoạn Tạo Ảnh (Prompt-First)
+
+**Trạng thái**: Accepted  
+**Ngày**: 2026-04-07
+
+### Bối cảnh
+Người dùng cần tạo nhiều ảnh khác nhau từ cùng một bài viết. Cách cũ: mỗi lần nhấn Generate → gọi Gemini để extract concept → build prompt → call Imagen. Tốn nhiều Gemini API calls, không cho phép review/edit trước khi tạo ảnh.
+
+### Quyết định
+**Tách thành 2 bước**:
+1. **Generate Prompts** (1 lần): Gemini tạo N concept + caption + Imagen prompt trong một JSON response
+2. **Generate Image** (per slot): Dùng pre-built prompt → chỉ gọi Imagen API
+
+### Lợi ích
+- Giảm Gemini API calls từ N xuống 1 khi tạo prompts
+- Người dùng có thể edit từng prompt trước khi tạo ảnh
+- Caption được generate cùng lúc, không cần thêm API call
+- UX rõ ràng: Step 1 → Step 2
+
+### Đánh đổi
+- Thêm 1 bước trong flow → phức tạp hơn 1 click
+- Nếu settings thay đổi sau khi generate prompts → phải regenerate
+
+---
+
+## ADR-008: Video = Prompt Only (Không Gọi Video API)
+
+**Trạng thái**: Accepted  
+**Ngày**: 2026-04-07
+
+### Bối cảnh
+Veo3 API chưa publicly available. Người dùng muốn tạo video từ nội dung humanized.
+
+### Quyết định
+Chỉ generate **Veo3-formatted prompt** theo công thức chính thức, không gọi video generation API. Người dùng copy prompt và dùng thủ công trong Google Veo3.
+
+### Lợi ích
+- Không phụ thuộc vào Veo3 API availability
+- Vẫn cung cấp giá trị thực: prompts đúng chuẩn, khác cinematography per slot, kèm caption
+- Dễ upgrade sau khi Veo3 API public
+
+### Công thức Veo3 áp dụng
+```
+[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]
+```
+
+---
+
+## ADR-009: Agent Isolation — Pure Style Transfer
+
+**Trạng thái**: Accepted  
+**Ngày**: 2026-04-07
+
+### Bối cảnh
+Khi AI Agent được chọn, settings panel vẫn visible và settings vẫn được pass vào `generateWithAgentStream`. Điều này gây conflict: agent học phong cách từ bài mẫu, nhưng lại bị override bởi HumanizeSettings.
+
+### Quyết định
+1. Khi Agent active → không pass `settings` vào `generateWithAgentStream`
+2. Khi Agent active → overlay frosted trên SettingsPanel, không cho tương tác
+3. Agent generation chỉ dùng `agentId` + `inputText` → pure style transfer
+
+### Lợi ích
+- Style agent học được không bị contaminate bởi settings
+- UX rõ ràng: user biết rõ mình đang dùng mode nào
+- Dễ debug: agent output = chỉ phụ thuộc vào training posts
+
