@@ -119,6 +119,44 @@ export interface ModeConfig {
   created_at: string;
 }
 
+// ── AI Agent types ────────────────────────────────────────────────────────────
+
+export interface AgentPost {
+  id: number;
+  agent_id: number;
+  title: string;
+  content: string;
+  platform: string;
+  created_at: string;
+}
+
+export interface Agent {
+  id: number;
+  name: string;
+  description: string;
+  avatar_emoji: string;
+  platform: string;
+  created_at: string;
+  updated_at: string;
+  post_count?: number; // from listAgents
+  posts?: AgentPost[]; // from getAgent
+}
+
+export interface AgentFormData {
+  name: string;
+  description: string;
+  avatar_emoji: string;
+  platform: string;
+}
+
+export interface AgentPostFormData {
+  title: string;
+  content: string;
+  platform: string;
+}
+
+// ── App state ─────────────────────────────────────────────────────────────────
+
 // App state
 export interface AppState {
   inputText: string;

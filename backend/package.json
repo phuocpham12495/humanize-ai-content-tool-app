@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "main": "src/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js"
+    "dev": "nodemon --env-file=.env src/index.js",
+    "start": "node --disable-warning=ExperimentalWarning src/index.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "better-sqlite3": "^9.4.3",
     "@google/generative-ai": "^0.21.0",
     "dotenv": "^16.4.1"
   },

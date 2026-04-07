@@ -384,6 +384,126 @@ GET /api/history/550e8400-e29b-41d4-a716-446655440000
 
 ---
 
+## AI Writing Agents API
+
+### GET /api/agents
+
+Liệt kê tất cả agents (kèm số lượng bài mẫu).
+
+```http
+GET /api/agents
+```
+
+**Response 200**
+```json
+{
+  "success": true,
+  "agents": [
+    { "id": 1, "name": "Minh Blogger", "description": "...", "avatar_emoji": "✍️", "platform": "facebook", "post_count": 5, "created_at": "..." }
+  ]
+}
+```
+
+---
+
+### POST /api/agents
+
+Tạo agent mới.
+
+**Request**
+```json
+{ "name": "Minh Blogger", "description": "Blogger công nghệ", "avatar_emoji": "✍️", "platform": "facebook" }
+```
+
+**Response 201** — trả về agent đầy đủ kèm `posts: []`
+
+---
+
+### GET /api/agents/:id
+
+Lấy thông tin agent + toàn bộ bài viết mẫu.
+
+**Response 200**
+```json
+{
+  "success": true,
+  "agent": {
+    "id": 1, "name": "Minh Blogger",
+    "posts": [
+      { "id": 1, "agent_id": 1, "title": "Bài về AI", "content": "...", "platform": "facebook", "created_at": "..." }
+    ]
+  }
+}
+```
+
+---
+
+### PUT /api/agents/:id — Cập nhật agent
+
+**Request**: `{ name?, description?, avatar_emoji?, platform? }`
+
+---
+
+### DELETE /api/agents/:id — Xóa agent
+
+Xóa agent và toàn bộ bài viết mẫu (CASCADE).
+
+---
+
+### POST /api/agents/:id/posts
+
+Thêm bài viết mẫu (human-written training data).
+
+**Request**
+```json
+{ "title": "Tiêu đề (optional)", "content": "Nội dung bài viết...", "platform": "facebook" }
+```
+
+**Validation**: `content` bắt buộc, không được rỗng.
+
+---
+
+### PUT /api/agents/:id/posts/:postId — Sửa bài
+
+**Request**: `{ title?, content?, platform? }`
+
+---
+
+### DELETE /api/agents/:id/posts/:postId — Xóa bài
+
+---
+
+### POST /api/agents/:id/generate
+
+Tạo nội dung theo phong cách agent (batch — không stream).
+
+**Request**
+```json
+{
+  "text": "Văn bản gốc cần transform",
+  "settings": { "platform": "facebook", "emotionalDepth": 70 }
+}
+```
+
+**Response 200**
+```json
+{ "success": true, "agentId": 1, "agentName": "Minh Blogger", "generatedText": "Kết quả..." }
+```
+
+**Lỗi đặc biệt (400)**: Nếu agent chưa có bài mẫu → `"No training data"`
+
+---
+
+### POST /api/agents/:id/generate/stream
+
+SSE streaming version của generate. Các events giống `/api/humanize/stream`:
+- `event: status` — `{ message }`
+- `event: chunk` — `{ text }`
+- `event: done` — `{ generatedText }`
+- `event: error` — `{ message }`
+
+---
+
 ### GET /api/health
 
 Kiểm tra trạng thái server.

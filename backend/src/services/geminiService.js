@@ -238,9 +238,84 @@ Provide 2-3 improvements and 2-3 strengths maximum.`;
   return await parseJsonResponse(responseText);
 }
 
+/**
+ * Build the agent-style prompt.
+ * Feeds sample posts from the agent as "style training data" and asks Gemini
+ * to mimic that style when transforming the input text.
+ */
+function buildAgentStylePrompt(text, agent, settings = {}) {
+  const posts = agent.posts || [];
+
+  const samples = posts
+    .slice(0, 10) // max 10 samples to stay within context limits
+    .map((p, i) => `--- Sample ${i + 1}${p.title ? ` (${p.title})` : ''} ---\n${p.content}`)
+    .join('\n\n');
+
+  const { platform = agent.platform || 'general', emotionalDepth = 50 } = settings;
+
+  return `You are a writing style analyst and content generator. Your task is to analyze the writing style of a human author from their sample posts, then rewrite the given text in that exact same style.
+
+AUTHOR NAME: "${agent.name}"
+${agent.description ? `AUTHOR DESCRIPTION: ${agent.description}` : ''}
+
+═══════════════════════════════════
+SAMPLE POSTS FROM THIS AUTHOR (${posts.length} samples):
+═══════════════════════════════════
+${samples}
+═══════════════════════════════════
+
+STEP 1 — ANALYZE THE AUTHOR'S STYLE:
+Study the samples above and identify:
+- Vocabulary choices: formal/informal, regional slang, favorite words
+- Sentence structure: short punchy vs long flowing, fragments, run-ons
+- Personality markers: humor, sarcasm, enthusiasm, hesitation phrases
+- Punctuation habits: ellipses, exclamation marks, em-dashes
+- Emotional tone: vulnerable, confident, questioning, opinionated
+- Signature phrases or expressions they repeat
+- Opening/closing patterns
+- Paragraph rhythm and length
+
+STEP 2 — REWRITE THE FOLLOWING TEXT IN THAT STYLE:
+"""
+${text}
+"""
+
+ADDITIONAL CONTEXT:
+- Target platform: ${platform}
+- Emotional depth: ${emotionalDepth}/100
+
+OUTPUT INSTRUCTIONS:
+- Write ONLY the transformed text — no analysis, no preamble, no meta-commentary
+- Sound EXACTLY like the author wrote it themselves
+- Preserve the original core message and information
+- Do NOT add phrases like "Here is the rewritten text:" or "In [author]'s style:"`;
+}
+
+/**
+ * Generate text in an agent's learned writing style (batch)
+ */
+async function generateWithAgentStyle(text, agent, settings = {}) {
+  const model = getModel();
+  const prompt = buildAgentStylePrompt(text, agent, settings);
+  const result = await model.generateContent(prompt);
+  return result.response.text().trim();
+}
+
+/**
+ * Generate text in an agent's learned writing style (SSE streaming)
+ */
+async function generateWithAgentStyleStream(text, agent, settings = {}) {
+  const model = getModel();
+  const prompt = buildAgentStylePrompt(text, agent, settings);
+  const result = await model.generateContentStream(prompt);
+  return result.stream;
+}
+
 module.exports = {
   analyzeText,
   humanizeText,
   humanizeTextStream,
-  scoreOutput
+  scoreOutput,
+  generateWithAgentStyle,
+  generateWithAgentStyleStream
 };

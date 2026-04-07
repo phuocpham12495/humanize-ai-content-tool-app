@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const humanizeRoutes = require('./routes/humanize');
+const agentRoutes = require('./routes/agents');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -25,6 +26,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', humanizeRoutes);
+app.use('/api/agents', agentRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -65,7 +67,17 @@ app.listen(PORT, () => {
   console.log('  POST /api/analyze                 — Analyze AI-likeness');
   console.log('  GET  /api/modes                   — List preset modes');
   console.log('  GET  /api/history/:sessionId      — Get session history');
-  console.log('  GET  /api/health                  — Health check\n');
+  console.log('  GET  /api/health                  — Health check');
+  console.log('  GET  /api/agents                  — List AI agents');
+  console.log('  POST /api/agents                  — Create agent');
+  console.log('  GET  /api/agents/:id              — Get agent + posts');
+  console.log('  PUT  /api/agents/:id              — Update agent');
+  console.log('  DELETE /api/agents/:id            — Delete agent');
+  console.log('  POST /api/agents/:id/posts        — Add training post');
+  console.log('  PUT  /api/agents/:id/posts/:pid   — Update post');
+  console.log('  DELETE /api/agents/:id/posts/:pid — Delete post');
+  console.log('  POST /api/agents/:id/generate     — Generate in agent style');
+  console.log('  POST /api/agents/:id/generate/stream — Generate (SSE)\n');
 });
 
 module.exports = app;

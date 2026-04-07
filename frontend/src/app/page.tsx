@@ -1,14 +1,18 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Zap, Github, Activity } from 'lucide-react';
+import { Sparkles, Zap, Activity, Bot } from 'lucide-react';
 import TextInput from '@/components/TextInput';
 import SettingsPanel from '@/components/SettingsPanel';
 import OutputPanel from '@/components/OutputPanel';
 import AnalysisPanel from '@/components/AnalysisPanel';
 import ComparisonView from '@/components/ComparisonView';
 import ActionButtons from '@/components/ActionButtons';
-import { humanizeText, humanizeTextStream, analyzeText, checkHealth } from '@/lib/api';
+import AgentManager from '@/components/AgentManager';
+import {
+  humanizeText, humanizeTextStream, analyzeText, checkHealth,
+  generateWithAgentStream, generateWithAgent
+} from '@/lib/api';
 import { defaultSettings, HumanizeSettings, AnalysisResult, OutputScores } from '@/types';
 
 export default function Home() {
@@ -23,6 +27,8 @@ export default function Home() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
+  const [agentManagerOpen, setAgentManagerOpen] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
   // Check backend health on mount
   useEffect(() => {
@@ -57,7 +63,28 @@ export default function Home() {
     setHumanizedText('');
     setScores(null);
 
-    // Use streaming for live rewrite (TC015)
+    // If an agent is selected, use agent-style generation instead
+    if (selectedAgentId) {
+      generateWithAgentStream(
+        selectedAgentId,
+        inputText,
+        {
+          onChunk: t => setHumanizedText(prev => prev + t),
+          onStatus: () => {},
+          onDone: t => { setHumanizedText(t); setIsHumanizing(false); },
+          onError: () => {
+            generateWithAgent(selectedAgentId, inputText, settings)
+              .then(r => setHumanizedText(r.generatedText))
+              .catch((e: any) => setError(e.message || 'Agent generation failed'))
+              .finally(() => setIsHumanizing(false));
+          }
+        },
+        settings
+      );
+      return;
+    }
+
+    // Standard streaming humanize (TC015)
     humanizeTextStream(
       inputText,
       settings,
@@ -70,8 +97,7 @@ export default function Home() {
           if (!sessionId) setSessionId(result.sessionId);
           setIsHumanizing(false);
         },
-        onError: (msg) => {
-          // Fallback to non-streaming on SSE error
+        onError: () => {
           humanizeText(inputText, settings, sessionId || undefined)
             .then(result => {
               setHumanizedText(result.humanizedText);
@@ -86,7 +112,7 @@ export default function Home() {
       },
       sessionId || undefined
     );
-  }, [inputText, settings, sessionId]);
+  }, [inputText, settings, sessionId, selectedAgentId]);
 
   const handleCompare = useCallback(() => {
     setActiveView('comparison');
@@ -156,8 +182,21 @@ export default function Home() {
             activeView={activeView}
           />
 
-          {/* Status + links */}
+          {/* Status + Agent button */}
           <div className="flex items-center gap-3">
+            {/* Agent manager button */}
+            <button
+              onClick={() => setAgentManagerOpen(true)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                selectedAgentId
+                  ? 'bg-violet-600/20 border-violet-500/60 text-violet-300'
+                  : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-violet-600/50 hover:text-violet-400'
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5" />
+              {selectedAgentId ? 'Agent active' : 'AI Agents'}
+            </button>
+
             {/* Backend status */}
             <div className="flex items-center gap-1.5">
               <div
@@ -199,6 +238,33 @@ export default function Home() {
             <p className="text-xs text-yellow-300">
               Backend is not running. Start it with: <code className="bg-yellow-900/40 px-1.5 py-0.5 rounded font-mono">cd backend && npm run dev</code>
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Agent Manager Drawer */}
+      <AgentManager
+        isOpen={agentManagerOpen}
+        onClose={() => setAgentManagerOpen(false)}
+        selectedAgentId={selectedAgentId}
+        onSelectAgent={setSelectedAgentId}
+        inputText={inputText}
+      />
+
+      {/* Active agent banner */}
+      {selectedAgentId && (
+        <div className="flex-shrink-0 px-6 py-1.5 bg-violet-950/60 border-b border-violet-900/50">
+          <div className="max-w-[1600px] mx-auto flex items-center justify-between">
+            <p className="text-xs text-violet-300">
+              <Bot className="w-3 h-3 inline mr-1" />
+              AI Agent đang hoạt động — Humanize sẽ dùng phong cách viết của agent này
+            </p>
+            <button
+              onClick={() => setSelectedAgentId(null)}
+              className="text-violet-400 hover:text-violet-200 text-xs"
+            >
+              Tắt
+            </button>
           </div>
         </div>
       )}

@@ -16,6 +16,64 @@
 
 ---
 
+## Cập Nhật Phiên Bản 2.0.0 — 2026-04-04 (Tính Năng: AI Writing Agents)
+
+### Tổng Quan
+Thêm hệ thống **AI Writing Agents** — người dùng tạo agent, nạp bài viết do CON NGƯỜI viết thật, và AI sẽ học phong cách đó để tạo nội dung mới y chang cách viết của người đó.
+
+### Backend
+
+#### DB Schema Mới
+- Bảng `agents`: id, name, description, avatar_emoji, platform, timestamps
+- Bảng `agent_posts`: id, agent_id (FK → agents), title, content, platform, created_at
+- Quan hệ: 1 agent → nhiều posts (ON DELETE CASCADE)
+
+#### Routes Mới (`/api/agents`)
+| Method | Path | Mô tả |
+|--------|------|-------|
+| GET | `/api/agents` | Liệt kê tất cả agents |
+| POST | `/api/agents` | Tạo agent mới |
+| GET | `/api/agents/:id` | Xem chi tiết agent + posts |
+| PUT | `/api/agents/:id` | Cập nhật agent |
+| DELETE | `/api/agents/:id` | Xóa agent + toàn bộ posts |
+| POST | `/api/agents/:id/posts` | Thêm bài viết mẫu |
+| PUT | `/api/agents/:id/posts/:pid` | Sửa bài viết mẫu |
+| DELETE | `/api/agents/:id/posts/:pid` | Xóa bài viết mẫu |
+| POST | `/api/agents/:id/generate` | Tạo nội dung theo phong cách agent (batch) |
+| POST | `/api/agents/:id/generate/stream` | Tạo nội dung (SSE stream) |
+
+#### Gemini Prompt Strategy (`buildAgentStylePrompt`)
+Kỹ thuật: **Few-Shot Style Transfer**
+1. Feed tối đa 10 bài viết mẫu vào context Gemini
+2. Yêu cầu Gemini phân tích phong cách: từ vựng, cấu trúc câu, markers cá nhân, nhịp điệu, cảm xúc
+3. Rewrite input text theo đúng phong cách đó
+4. Output: chỉ text thuần — không giải thích, không meta-commentary
+
+### Frontend
+
+#### Component Mới: `AgentManager.tsx`
+- **Drawer panel** từ phải — mở bằng nút "AI Agents" trên header
+- **AgentList**: Hiển thị các agent dưới dạng cards với avatar emoji, số bài mẫu, trạng thái active
+- **AgentForm**: Tạo/sửa agent — chọn emoji, đặt tên, mô tả, platform
+- **PostForm**: Thêm/sửa bài viết mẫu — title, content, platform nguồn gốc
+- **AgentDetail**: Xem chi tiết agent, quản lý posts, thử nghiệm phong cách ngay trong drawer
+- **Live preview**: Nhấn "Thử nghiệm phong cách" → stream kết quả ngay trong drawer
+
+#### Tích Hợp vào `page.tsx`
+- Header: Nút "AI Agents" → mở AgentManager drawer
+- Khi agent được chọn → banner thông báo tím + nút Tắt
+- `handleHumanize`: Nếu có agent active → dùng `generateWithAgentStream`; nếu không → dùng humanize thông thường
+
+#### Quy Trình Người Dùng
+1. Click "AI Agents" → drawer mở
+2. "Tạo AI Agent mới" → đặt tên, chọn emoji/platform
+3. Vào detail → "Thêm bài" → paste bài viết người thật viết
+4. Thêm 3-10 bài để AI học tốt hơn
+5. Click "Áp dụng agent này" → quay ra màn hình chính
+6. Paste text cần transform → Click "Humanize" → AI viết theo phong cách đã học
+
+---
+
 ## Cập Nhật Phiên Bản 1.2.0 — 2026-04-04 (Audit Vòng 2)
 
 ### Lỗi và Thiếu Sót Được Khắc Phục
