@@ -1,3 +1,17 @@
+// Gemini text model options
+export type GeminiModel =
+  | 'gemini-2.5-flash'
+  | 'gemini-2.5-pro'
+  | 'gemini-2.0-flash'
+  | 'gemini-1.5-flash'
+  | 'gemini-1.5-pro';
+
+// Gemini image generation model options
+export type GeminiImageModel =
+  | 'imagen-4.0-fast-generate-001'
+  | 'imagen-4.0-generate-001'
+  | 'imagen-3.0-generate-001';
+
 // Writing style options
 export type WritingStyle = 'casual' | 'professional' | 'storytelling' | 'opinionated' | 'messy_human';
 
@@ -23,6 +37,8 @@ export interface HumanFingerprint {
 
 // Settings for humanization
 export interface HumanizeSettings {
+  geminiModel: GeminiModel;
+  geminiImageModel: GeminiImageModel;
   writingStyle: WritingStyle;
   platform: Platform;
   emotionalDepth: number; // 0-100
@@ -40,6 +56,8 @@ export interface HumanizeSettings {
 
 // Default settings
 export const defaultSettings: HumanizeSettings = {
+  geminiModel: 'gemini-2.5-flash',
+  geminiImageModel: 'imagen-4.0-fast-generate-001',
   writingStyle: 'casual',
   platform: 'facebook',
   emotionalDepth: 50,

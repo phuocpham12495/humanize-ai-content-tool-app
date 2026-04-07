@@ -27,6 +27,7 @@ router.post('/generate-prompts', async (req, res) => {
       contentType = 'storytelling',
       customVisualPrompt = '',
       customContentPrompt = '',
+      geminiModel,
     } = req.body;
 
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -57,6 +58,7 @@ router.post('/generate-prompts', async (req, res) => {
       contentType,
       customVisualPrompt,
       customContentPrompt,
+      geminiModel,
     });
 
     res.json({ success: true, prompts });

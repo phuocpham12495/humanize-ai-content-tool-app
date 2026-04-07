@@ -5,6 +5,7 @@ const humanizeRoutes = require('./routes/humanize');
 const agentRoutes = require('./routes/agents');
 const imageRoutes = require('./routes/images');
 const videoRoutes = require('./routes/videos');
+const settingsRoutes = require('./routes/settings');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,6 +32,7 @@ app.use('/api', humanizeRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/videos', videoRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

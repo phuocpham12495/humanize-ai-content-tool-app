@@ -30,7 +30,7 @@ router.post('/humanize', async (req, res) => {
     const humanizedText = await humanizeText(text.trim(), effectiveSettings);
 
     // Score the output
-    const scores = await scoreOutput(text.trim(), humanizedText);
+    const scores = await scoreOutput(text.trim(), humanizedText, effectiveSettings.geminiModel);
 
     // Save to history
     const historyId = saveHistory(sid, text.trim(), humanizedText, effectiveSettings, scores);
@@ -80,7 +80,8 @@ router.post('/analyze', async (req, res) => {
       });
     }
 
-    const analysis = await analyzeText(text.trim());
+    const { geminiModel } = req.body;
+    const analysis = await analyzeText(text.trim(), geminiModel);
 
     const sid = sessionId || crypto.randomUUID();
 
@@ -153,7 +154,7 @@ router.post('/humanize/stream', async (req, res) => {
     send('status', { message: 'Scoring output...' });
 
     // Score the final output
-    const scores = await scoreOutput(text.trim(), fullText.trim());
+    const scores = await scoreOutput(text.trim(), fullText.trim(), effectiveSettings.geminiModel);
 
     // Save to history
     const historyId = saveHistory(sid, text.trim(), fullText.trim(), effectiveSettings, scores);

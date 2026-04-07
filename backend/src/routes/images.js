@@ -29,7 +29,8 @@ router.post('/generate-prompts', async (req, res) => {
       contentType = 'storytelling',
       customVisualPrompt = '',
       customContentPrompt = '',
-      aspectRatio = '1:1'
+      aspectRatio = '1:1',
+      geminiModel
     } = req.body;
 
     if (!text || typeof text !== 'string' || !text.trim()) {
@@ -57,7 +58,8 @@ router.post('/generate-prompts', async (req, res) => {
       contentType,
       customVisualPrompt,
       customContentPrompt,
-      aspectRatio
+      aspectRatio,
+      geminiModel
     });
 
     res.json({ success: true, prompts });
@@ -93,7 +95,9 @@ router.post('/generate', async (req, res) => {
       // Common
       aspectRatio = '1:1',
       index = 0,
-      total = 1
+      total = 1,
+      geminiModel,
+      geminiImageModel
     } = req.body;
 
     if (!VALID_ASPECT_RATIOS.includes(aspectRatio)) {
@@ -108,7 +112,8 @@ router.post('/generate', async (req, res) => {
         prompt: prebuiltPrompt,
         concept: prebuiltConcept,
         aspectRatio,
-        index: Number(index)
+        index: Number(index),
+        geminiImageModel
       });
     } else {
       // Mode B: full pipeline (extract concept → build prompt → generate)
@@ -134,7 +139,8 @@ router.post('/generate', async (req, res) => {
       result = await generateImage({
         text: text.trim(), visualStyle, contentType,
         customVisualPrompt, customContentPrompt,
-        aspectRatio, index: Number(index), total: Number(total)
+        aspectRatio, index: Number(index), total: Number(total),
+        geminiModel, geminiImageModel
       });
     }
 

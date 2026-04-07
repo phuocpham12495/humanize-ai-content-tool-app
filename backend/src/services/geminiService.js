@@ -13,8 +13,17 @@ function getGenAI() {
   return genAI;
 }
 
-function getModel() {
-  return getGenAI().getGenerativeModel({ model: 'gemini-2.5-flash' });
+const VALID_GEMINI_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-pro',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+];
+
+function getModel(modelId) {
+  const model = VALID_GEMINI_MODELS.includes(modelId) ? modelId : 'gemini-2.5-flash';
+  return getGenAI().getGenerativeModel({ model });
 }
 
 async function parseJsonResponse(text) {
@@ -35,8 +44,8 @@ async function parseJsonResponse(text) {
 /**
  * Analyze text for AI-likeness and suspicious patterns
  */
-async function analyzeText(text) {
-  const model = getModel();
+async function analyzeText(text, geminiModel) {
+  const model = getModel(geminiModel);
 
   const prompt = `You are an expert AI content detector and linguist. Analyze the following text for AI-generated patterns and return a detailed JSON analysis.
 
@@ -82,7 +91,7 @@ Identify at most 5 most suspicious sentences.`;
  * Humanize text based on provided settings
  */
 async function humanizeText(text, settings = {}) {
-  const model = getModel();
+  const model = getModel(settings.geminiModel);
   const prompt = await buildHumanizePrompt(text, settings);
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
@@ -92,7 +101,7 @@ async function humanizeText(text, settings = {}) {
  * Streaming version of humanizeText — returns an async iterable of chunks (TC015)
  */
 async function humanizeTextStream(text, settings = {}) {
-  const model = getModel();
+  const model = getModel(settings.geminiModel);
   // Re-use the same prompt building logic by calling humanizeText internals
   // We build the prompt here by temporarily duplicating the prompt construction
   const prompt = await buildHumanizePrompt(text, settings);
@@ -195,8 +204,8 @@ OUTPUT INSTRUCTIONS:
 /**
  * Score the humanized output
  */
-async function scoreOutput(originalText, humanizedText) {
-  const model = getModel();
+async function scoreOutput(originalText, humanizedText, geminiModel) {
+  const model = getModel(geminiModel);
 
   const prompt = `You are an expert content analyst. Compare the original AI-generated text with the humanized version and score the humanized text.
 
@@ -295,7 +304,7 @@ OUTPUT INSTRUCTIONS:
  * Generate text in an agent's learned writing style (batch)
  */
 async function generateWithAgentStyle(text, agent, settings = {}) {
-  const model = getModel();
+  const model = getModel(settings.geminiModel);
   const prompt = buildAgentStylePrompt(text, agent, settings);
   const result = await model.generateContent(prompt);
   return result.response.text().trim();
@@ -305,7 +314,7 @@ async function generateWithAgentStyle(text, agent, settings = {}) {
  * Generate text in an agent's learned writing style (SSE streaming)
  */
 async function generateWithAgentStyleStream(text, agent, settings = {}) {
-  const model = getModel();
+  const model = getModel(settings.geminiModel);
   const prompt = buildAgentStylePrompt(text, agent, settings);
   const result = await model.generateContentStream(prompt);
   return result.stream;

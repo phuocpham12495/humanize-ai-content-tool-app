@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, Zap, Activity, Bot, Image, Film } from 'lucide-react';
 import TextInput from '@/components/TextInput';
 import SettingsPanel from '@/components/SettingsPanel';
@@ -13,7 +13,8 @@ import ImageGenerator from '@/components/ImageGenerator';
 import VideoGenerator from '@/components/VideoGenerator';
 import {
   humanizeText, humanizeTextStream, analyzeText, checkHealth,
-  generateWithAgentStream, generateWithAgent
+  generateWithAgentStream, generateWithAgent,
+  loadModelSettings, saveModelSettings
 } from '@/lib/api';
 import { defaultSettings, HumanizeSettings, AnalysisResult, OutputScores } from '@/types';
 
@@ -32,12 +33,25 @@ export default function Home() {
   const [agentManagerOpen, setAgentManagerOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
-  // Check backend health on mount
+  // Check backend health and load saved model settings on mount
   useEffect(() => {
     checkHealth()
-      .then(() => setBackendStatus('ok'))
+      .then(() => {
+        setBackendStatus('ok');
+        return loadModelSettings();
+      })
+      .then(({ geminiModel, geminiImageModel }) => {
+        setSettings(prev => ({ ...prev, geminiModel: geminiModel as any, geminiImageModel: geminiImageModel as any }));
+      })
       .catch(() => setBackendStatus('error'));
   }, []);
+
+  // Save model settings to DB whenever they change (skip on first render)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    saveModelSettings(settings.geminiModel, settings.geminiImageModel).catch(() => {});
+  }, [settings.geminiModel, settings.geminiImageModel]);
 
   const handleAnalyze = useCallback(async () => {
     if (!inputText.trim()) return;
@@ -46,7 +60,7 @@ export default function Home() {
     setActiveView('analysis');
 
     try {
-      const result = await analyzeText(inputText, sessionId || undefined);
+      const result = await analyzeText(inputText, sessionId || undefined, settings.geminiModel);
       setAnalysis(result.analysis);
       if (!sessionId) setSessionId(result.sessionId);
     } catch (err: any) {
@@ -55,7 +69,7 @@ export default function Home() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [inputText, sessionId]);
+  }, [inputText, sessionId, settings.geminiModel]);
 
   const handleHumanize = useCallback(() => {
     if (!inputText.trim()) return;
@@ -380,10 +394,17 @@ export default function Home() {
                 />
               )}
               {activeView === 'images' && (
-                <ImageGenerator humanizedText={humanizedText} />
+                <ImageGenerator
+                  humanizedText={humanizedText}
+                  geminiModel={settings.geminiModel}
+                  geminiImageModel={settings.geminiImageModel}
+                />
               )}
               {activeView === 'videos' && (
-                <VideoGenerator humanizedText={humanizedText} />
+                <VideoGenerator
+                  humanizedText={humanizedText}
+                  geminiModel={settings.geminiModel}
+                />
               )}
             </div>
           </div>

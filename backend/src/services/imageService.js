@@ -1,5 +1,15 @@
 require('dotenv').config();
 
+const VALID_IMAGEN_MODELS = [
+  'imagen-4.0-fast-generate-001',
+  'imagen-4.0-generate-001',
+  'imagen-3.0-generate-001',
+];
+
+function resolveImagenModel(modelId) {
+  return VALID_IMAGEN_MODELS.includes(modelId) ? modelId : 'imagen-4.0-fast-generate-001';
+}
+
 const IMAGEN_MODEL = 'imagen-4.0-fast-generate-001';
 
 const VISUAL_STYLE_PROMPTS = {
@@ -23,13 +33,16 @@ const NO_TEXT_RULE = 'No text, no letters, no words, no captions, no watermarks,
  * Extract the core visual concept from a humanized post using Gemini text model.
  * Returns a short scene description suitable for an image prompt.
  */
-async function extractImageConcept(text, contentType) {
+async function extractImageConcept(text, contentType, geminiModel) {
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
+  const validGeminiModels = ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
+  const resolvedModel = validGeminiModels.includes(geminiModel) ? geminiModel : 'gemini-2.5-flash';
+
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: resolvedModel });
 
   const contentInstructions = {
     storytelling: 'Describe the most compelling VISUAL SCENE or moment from this text — what would make a dramatic, cinematic illustration. Pure visuals only, no text in image.',
@@ -80,11 +93,12 @@ function buildImagenPrompt({ concept, visualStyle, contentType, customVisualProm
 /**
  * Call Imagen 4 Fast REST API — returns { base64: string, mimeType: string }
  */
-async function callImagen(prompt, aspectRatio = '1:1') {
+async function callImagen(prompt, aspectRatio = '1:1', imagenModel) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${IMAGEN_MODEL}:predict?key=${apiKey}`;
+  const model = resolveImagenModel(imagenModel);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
 
   const body = {
     instances: [{ prompt }],
@@ -143,11 +157,13 @@ async function generateImage(opts) {
     customContentPrompt = '',
     aspectRatio = '1:1',
     index = 0,
-    total = 1
+    total = 1,
+    geminiModel,
+    geminiImageModel
   } = opts;
 
   // Step 1: Extract visual concept from text
-  const concept = await extractImageConcept(text, contentType);
+  const concept = await extractImageConcept(text, contentType, geminiModel);
 
   // Step 2: Build full prompt
   const prompt = buildImagenPrompt({
@@ -156,8 +172,8 @@ async function generateImage(opts) {
     index, total
   });
 
-  // Step 3: Call Imagen 4 Fast
-  const { base64, mimeType } = await callImagen(prompt, aspectRatio);
+  // Step 3: Call Imagen
+  const { base64, mimeType } = await callImagen(prompt, aspectRatio, geminiImageModel);
 
   return { base64, mimeType, prompt, concept };
 }
@@ -184,14 +200,18 @@ async function generatePrompts(opts) {
     contentType = 'storytelling',
     customVisualPrompt = '',
     customContentPrompt = '',
+    geminiModel,
   } = opts;
 
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
+  const validGeminiModels = ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
+  const resolvedGeminiModel = validGeminiModels.includes(geminiModel) ? geminiModel : 'gemini-2.5-flash';
+
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: resolvedGeminiModel });
 
   const contentInstructions = {
     storytelling: 'a compelling visual scene or cinematic moment from the text. Pure visuals only — no text, letters, or words in the image',
@@ -231,7 +251,7 @@ Example: [{"concept": "...", "caption": "..."}, {"concept": "...", "caption": ".
     // Fallback: generate concepts one by one
     concepts = [];
     for (let i = 0; i < count; i++) {
-      const c = await extractImageConcept(text, contentType);
+      const c = await extractImageConcept(text, contentType, geminiModel);
       concepts.push({ concept: c });
     }
   }
@@ -271,10 +291,11 @@ async function generateImageFromPrompt(opts) {
     prompt,
     concept,
     aspectRatio = '1:1',
-    index = 0
+    index = 0,
+    geminiImageModel
   } = opts;
 
-  const { base64, mimeType } = await callImagen(prompt, aspectRatio);
+  const { base64, mimeType } = await callImagen(prompt, aspectRatio, geminiImageModel);
   return { base64, mimeType, prompt, concept };
 }
 

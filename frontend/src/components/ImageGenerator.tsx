@@ -297,9 +297,11 @@ function ImageSlot({ index, slot, onGenerate, onDownload, onEditPrompt, disabled
 
 interface ImageGeneratorProps {
   humanizedText: string;
+  geminiModel?: string;
+  geminiImageModel?: string;
 }
 
-export default function ImageGenerator({ humanizedText }: ImageGeneratorProps) {
+export default function ImageGenerator({ humanizedText, geminiModel, geminiImageModel }: ImageGeneratorProps) {
   const [settings, setSettings] = useState<ImageSettings>(defaultImageSettings);
   const [slots, setSlots] = useState<ImageSlotState[]>(
     Array.from({ length: defaultImageSettings.count }, () => ({ status: 'empty' }))
@@ -359,7 +361,7 @@ export default function ImageGenerator({ humanizedText }: ImageGeneratorProps) {
     setIsGeneratingPrompts(true);
 
     try {
-      const res = await generateImagePrompts(humanizedText, settings);
+      const res = await generateImagePrompts(humanizedText, settings, geminiModel);
 
       setSlots(prev => prev.map((s, i) => {
         const p = res.prompts[i];
@@ -393,7 +395,7 @@ export default function ImageGenerator({ humanizedText }: ImageGeneratorProps) {
         ? { prompt: slot.prebuiltPrompt, concept: slot.prebuiltConcept }
         : undefined;
 
-      const res = await generateImageApi(humanizedText, settings, index, prebuilt);
+      const res = await generateImageApi(humanizedText, settings, index, prebuilt, geminiModel, geminiImageModel);
       let dataUrl = res.image.dataUrl;
 
       if (logoDataUrl) {

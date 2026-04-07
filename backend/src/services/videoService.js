@@ -33,14 +33,18 @@ async function generateVideoPrompts(opts) {
     contentType = 'storytelling',
     customVisualPrompt = '',
     customContentPrompt = '',
+    geminiModel,
   } = opts;
 
   const { GoogleGenerativeAI } = require('@google/generative-ai');
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
+  const validGeminiModels = ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
+  const resolvedModel = validGeminiModels.includes(geminiModel) ? geminiModel : 'gemini-2.5-flash';
+
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+  const model = genAI.getGenerativeModel({ model: resolvedModel });
 
   const visualHint = visualStyle === 'custom'
     ? customVisualPrompt

@@ -57,14 +57,15 @@ export async function humanizeText(
 
 export async function analyzeText(
   text: string,
-  sessionId?: string
+  sessionId?: string,
+  geminiModel?: string
 ): Promise<AnalyzeResponse> {
   const response = await fetch(`${API_URL}/api/analyze`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ text, sessionId })
+    body: JSON.stringify({ text, sessionId, geminiModel })
   });
 
   return handleResponse<AnalyzeResponse>(response);
@@ -189,7 +190,8 @@ export interface GeneratedPrompt {
 
 export async function generateImagePrompts(
   text: string,
-  settings: ImageSettings
+  settings: ImageSettings,
+  geminiModel?: string
 ): Promise<{ success: boolean; prompts: GeneratedPrompt[] }> {
   const response = await fetch(`${API_URL}/api/images/generate-prompts`, {
     method: 'POST',
@@ -201,7 +203,8 @@ export async function generateImagePrompts(
       contentType: settings.contentType,
       customVisualPrompt: settings.customVisualPrompt,
       customContentPrompt: settings.customContentPrompt,
-      aspectRatio: settings.aspectRatio
+      aspectRatio: settings.aspectRatio,
+      geminiModel
     })
   });
   return handleResponse(response);
@@ -211,7 +214,9 @@ export async function generateImage(
   text: string,
   settings: ImageSettings,
   index: number,
-  prebuilt?: { prompt: string; concept: string }
+  prebuilt?: { prompt: string; concept: string },
+  geminiModel?: string,
+  geminiImageModel?: string
 ): Promise<GenerateImageResponse> {
   const body = prebuilt
     ? {
@@ -220,7 +225,9 @@ export async function generateImage(
         aspectRatio: settings.aspectRatio,
         visualStyle: settings.visualStyle,
         contentType: settings.contentType,
-        index
+        index,
+        geminiModel,
+        geminiImageModel
       }
     : {
         text,
@@ -230,7 +237,9 @@ export async function generateImage(
         customContentPrompt: settings.customContentPrompt,
         aspectRatio: settings.aspectRatio,
         index,
-        total: settings.count
+        total: settings.count,
+        geminiModel,
+        geminiImageModel
       };
 
   const response = await fetch(`${API_URL}/api/images/generate`, {
@@ -380,7 +389,8 @@ export interface GeneratedVideoPrompt {
 
 export async function generateVideoPrompts(
   text: string,
-  settings: VideoSettings
+  settings: VideoSettings,
+  geminiModel?: string
 ): Promise<{ success: boolean; prompts: GeneratedVideoPrompt[] }> {
   const response = await fetch(`${API_URL}/api/videos/generate-prompts`, {
     method: 'POST',
@@ -392,9 +402,26 @@ export async function generateVideoPrompts(
       contentType: settings.contentType,
       customVisualPrompt: settings.customVisualPrompt,
       customContentPrompt: settings.customContentPrompt,
+      geminiModel
     })
   });
   return handleResponse(response);
+}
+
+// ── Model Settings API ────────────────────────────────────────────────────────
+
+export async function loadModelSettings(): Promise<{ geminiModel: string; geminiImageModel: string }> {
+  const response = await fetch(`${API_URL}/api/settings/models`);
+  const data = await handleResponse<{ success: boolean; geminiModel: string; geminiImageModel: string }>(response);
+  return { geminiModel: data.geminiModel, geminiImageModel: data.geminiImageModel };
+}
+
+export async function saveModelSettings(geminiModel: string, geminiImageModel: string): Promise<void> {
+  await fetch(`${API_URL}/api/settings/models`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ geminiModel, geminiImageModel })
+  });
 }
 
 export { ApiError };

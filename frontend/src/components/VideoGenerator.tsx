@@ -174,9 +174,10 @@ function FormulaReference() {
 
 interface VideoGeneratorProps {
   humanizedText: string;
+  geminiModel?: string;
 }
 
-export default function VideoGenerator({ humanizedText }: VideoGeneratorProps) {
+export default function VideoGenerator({ humanizedText, geminiModel }: VideoGeneratorProps) {
   const [settings, setSettings] = useState<VideoSettings>(defaultVideoSettings);
   const [slots, setSlots] = useState<VideoSlotState[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -205,7 +206,7 @@ export default function VideoGenerator({ humanizedText }: VideoGeneratorProps) {
     setError(null);
 
     try {
-      const res = await generateVideoPrompts(humanizedText, settings);
+      const res = await generateVideoPrompts(humanizedText, settings, geminiModel);
       setSlots(res.prompts.map(p => ({
         status: 'done',
         veoPrompt: p.veoPrompt,

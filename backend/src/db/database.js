@@ -52,6 +52,12 @@ db.exec(`
     platform TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS app_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Seed default configs
@@ -244,9 +250,23 @@ function getAgentPosts(agentId) {
   return db.prepare('SELECT * FROM agent_posts WHERE agent_id = ? ORDER BY created_at DESC').all(agentId);
 }
 
+// ── App Settings ─────────────────────────────────────────────────────────────
+
+function getSetting(key) {
+  const row = db.prepare('SELECT value FROM app_settings WHERE key = ?').get(key);
+  return row ? row.value : null;
+}
+
+function setSetting(key, value) {
+  db.prepare(
+    'INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP'
+  ).run(key, value);
+}
+
 module.exports = {
   db,
   getConfigs, getConfigByName, saveHistory, getHistory,
   listAgents, getAgent, createAgent, updateAgent, deleteAgent,
-  addAgentPost, updateAgentPost, deleteAgentPost, getAgentPosts
+  addAgentPost, updateAgentPost, deleteAgentPost, getAgentPosts,
+  getSetting, setSetting
 };

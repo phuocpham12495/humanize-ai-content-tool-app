@@ -3,11 +3,11 @@
 import { useState } from 'react';
 import {
   ChevronDown, ChevronRight, Pen, Monitor, Sliders,
-  Zap, User, Globe, Sparkles, Fingerprint
+  Zap, User, Globe, Sparkles, Fingerprint, Cpu
 } from 'lucide-react';
 import {
   HumanizeSettings, WritingStyle, Platform, Persona,
-  CulturalTone, OneClickMode
+  CulturalTone, OneClickMode, GeminiModel, GeminiImageModel
 } from '@/types';
 
 interface SettingsPanelProps {
@@ -144,6 +144,20 @@ const personas: { value: Persona; label: string; desc: string }[] = [
   { value: 'skeptic', label: 'Skeptic', desc: 'Questioning & bold' },
 ];
 
+const geminiModels: { value: GeminiModel; label: string; desc: string; badge?: string }[] = [
+  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast & smart (recommended)', badge: 'Default' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Most capable, slower' },
+  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Balanced performance' },
+  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Lightweight & fast' },
+  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Stable & reliable' },
+];
+
+const geminiImageModels: { value: GeminiImageModel; label: string; desc: string; badge?: string }[] = [
+  { value: 'imagen-4.0-fast-generate-001', label: 'Imagen 4 Fast', desc: 'Quick generation (recommended)', badge: 'Default' },
+  { value: 'imagen-4.0-generate-001', label: 'Imagen 4', desc: 'Higher quality, slower' },
+  { value: 'imagen-3.0-generate-001', label: 'Imagen 3', desc: 'Stable & consistent' },
+];
+
 const culturalTones: { value: CulturalTone; label: string; emoji: string }[] = [
   { value: 'neutral', label: 'Neutral', emoji: '🌍' },
   { value: 'us', label: 'US / Western', emoji: '🇺🇸' },
@@ -223,21 +237,22 @@ export default function SettingsPanel({ settings, onChange, onOneClickHumanize, 
   };
 
   return (
-    <div className="relative space-y-2 overflow-y-auto max-h-full">
-      {/* Agent active overlay */}
-      {agentActive && (
-        <div className="absolute inset-0 z-10 bg-gray-950/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-3 p-4">
-          <div className="w-10 h-10 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center">
-            <span className="text-xl">🤖</span>
+    <div className="space-y-2 overflow-y-auto max-h-full">
+      {/* Sections disabled when agent is active */}
+      <div className="relative space-y-2">
+        {agentActive && (
+          <div className="absolute inset-0 z-10 bg-gray-950/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-3 p-4">
+            <div className="w-10 h-10 rounded-full bg-violet-600/20 border border-violet-500/50 flex items-center justify-center">
+              <span className="text-xl">🤖</span>
+            </div>
+            <div className="text-center space-y-1">
+              <p className="text-sm font-semibold text-violet-300">AI Agent đang hoạt động</p>
+              <p className="text-xs text-gray-500 leading-relaxed">
+                Cài đặt bị tắt khi dùng Agent.<br />Tắt Agent để dùng cài đặt thủ công.
+              </p>
+            </div>
           </div>
-          <div className="text-center space-y-1">
-            <p className="text-sm font-semibold text-violet-300">AI Agent đang hoạt động</p>
-            <p className="text-xs text-gray-500 leading-relaxed">
-              Cài đặt bị tắt khi dùng Agent.<br />Tắt Agent để dùng cài đặt thủ công.
-            </p>
-          </div>
-        </div>
-      )}
+        )}
       {/* One-Click Modes */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-1">
@@ -508,7 +523,69 @@ export default function SettingsPanel({ settings, onChange, onOneClickHumanize, 
             </div>
           </div>
         </CollapsibleSection>
-      </div>
+      </div>{/* end border-t wrapper */}
+      </div>{/* end agent-disabled wrapper */}
+
+      {/* AI Models — always enabled, not affected by agentActive */}
+      <CollapsibleSection
+        title="AI Models"
+        icon={<Cpu className="w-4 h-4" />}
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-gray-400 block mb-1.5">Text Generation Model</label>
+            <div className="space-y-1">
+              {geminiModels.map((m) => (
+                <button
+                  key={m.value}
+                  onClick={() => update({ geminiModel: m.value })}
+                  className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-all ${
+                    settings.geminiModel === m.value
+                      ? 'bg-violet-600/30 border border-violet-500/50 text-violet-200'
+                      : 'bg-gray-800/50 border border-transparent hover:border-gray-700 text-gray-400 hover:text-gray-300'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-medium">{m.label}</div>
+                    <div className="text-xs opacity-60">{m.desc}</div>
+                  </div>
+                  {m.badge && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/30 flex-shrink-0">
+                      {m.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-1.5">Image Generation Model</label>
+            <div className="space-y-1">
+              {geminiImageModels.map((m) => (
+                <button
+                  key={m.value}
+                  onClick={() => update({ geminiImageModel: m.value })}
+                  className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-all ${
+                    settings.geminiImageModel === m.value
+                      ? 'bg-violet-600/30 border border-violet-500/50 text-violet-200'
+                      : 'bg-gray-800/50 border border-transparent hover:border-gray-700 text-gray-400 hover:text-gray-300'
+                  }`}
+                >
+                  <div>
+                    <div className="text-xs font-medium">{m.label}</div>
+                    <div className="text-xs opacity-60">{m.desc}</div>
+                  </div>
+                  {m.badge && (
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/30 flex-shrink-0">
+                      {m.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CollapsibleSection>
     </div>
   );
 }
