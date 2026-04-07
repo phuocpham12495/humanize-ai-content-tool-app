@@ -181,7 +181,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="text-base font-bold text-white leading-tight">Humanize AI Content Tool</h1>
-              <p className="text-xs text-gray-500">Powered by Gemini 2.5 Flash</p>
+              <p className="text-xs text-gray-500">AI Agent v1.0</p>
             </div>
           </div>
 
@@ -410,6 +410,13 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="flex-shrink-0 border-t border-gray-800/60 bg-gray-950/80 backdrop-blur-sm px-6 py-2">
+        <div className="max-w-[1600px] mx-auto text-center">
+          <p className="text-xs text-gray-500">© PHUOC IT 95 AI Agent</p>
+        </div>
+      </footer>
     </div>
   );
 }
