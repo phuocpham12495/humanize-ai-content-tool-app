@@ -37,7 +37,39 @@ const ASPECT_RATIOS: { value: AspectRatio; label: string; icon: string }[] = [
 
 // ── Canvas: overlay logo onto image ──────────────────────────────────────────
 
+/**
+ * Remove white/near-white background from a logo by making those pixels transparent.
+ * Returns a new data URL with the background removed.
+ */
+function removeWhiteBackground(logoDataUrl: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, c.width, c.height);
+      const d = imageData.data;
+      const threshold = 240; // pixels with R,G,B all >= threshold are considered "white"
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] >= threshold && d[i + 1] >= threshold && d[i + 2] >= threshold) {
+          d[i + 3] = 0; // set alpha to 0
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(c.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(logoDataUrl);
+    img.src = logoDataUrl;
+  });
+}
+
 async function overlayLogo(imageDataUrl: string, logoDataUrl: string): Promise<string> {
+  // Pre-process logo: remove white background
+  const cleanLogoUrl = await removeWhiteBackground(logoDataUrl);
+
   return new Promise((resolve) => {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d')!;
@@ -59,7 +91,7 @@ async function overlayLogo(imageDataUrl: string, logoDataUrl: string): Promise<s
         resolve(canvas.toDataURL('image/png'));
       };
       logo.onerror = () => resolve(imageDataUrl);
-      logo.src = logoDataUrl;
+      logo.src = cleanLogoUrl;
     };
     img.src = imageDataUrl;
   });

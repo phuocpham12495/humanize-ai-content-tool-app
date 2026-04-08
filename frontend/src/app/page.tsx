@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Sparkles, Zap, Activity, Bot, Image, Film } from 'lucide-react';
 import TextInput from '@/components/TextInput';
 import SettingsPanel from '@/components/SettingsPanel';
@@ -46,11 +46,9 @@ export default function Home() {
       .catch(() => setBackendStatus('error'));
   }, []);
 
-  // Save model settings to DB whenever they change (skip on first render)
-  const isFirstRender = useRef(true);
-  useEffect(() => {
-    if (isFirstRender.current) { isFirstRender.current = false; return; }
-    saveModelSettings(settings.geminiModel, settings.geminiImageModel).catch(() => {});
+  // Explicit save model settings to DB (triggered by Save button)
+  const handleSaveModels = useCallback(async () => {
+    await saveModelSettings(settings.geminiModel, settings.geminiImageModel);
   }, [settings.geminiModel, settings.geminiImageModel]);
 
   const handleAnalyze = useCallback(async () => {
@@ -293,6 +291,7 @@ export default function Home() {
               settings={settings}
               onChange={setSettings}
               onOneClickHumanize={inputText.trim() ? handleOneClickHumanize : undefined}
+              onSaveModels={handleSaveModels}
               disabled={isAnalyzing || isHumanizing}
               agentActive={!!selectedAgentId}
             />

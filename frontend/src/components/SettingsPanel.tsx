@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import {
   ChevronDown, ChevronRight, Pen, Monitor, Sliders,
-  Zap, User, Globe, Sparkles, Fingerprint, Cpu
+  Zap, User, Globe, Sparkles, Fingerprint, Cpu, Save, Check
 } from 'lucide-react';
 import {
   HumanizeSettings, WritingStyle, Platform, Persona,
@@ -14,6 +14,7 @@ interface SettingsPanelProps {
   settings: HumanizeSettings;
   onChange: (settings: HumanizeSettings) => void;
   onOneClickHumanize?: (settings: HumanizeSettings) => void;
+  onSaveModels?: () => Promise<void>;
   disabled?: boolean;
   agentActive?: boolean;
 }
@@ -171,7 +172,23 @@ const oneclickModes: { value: OneClickMode; label: string; emoji: string; color:
   { value: 'relatable', label: 'Make it Relatable', emoji: '❤️', color: 'from-emerald-600 to-teal-600' },
 ];
 
-export default function SettingsPanel({ settings, onChange, onOneClickHumanize, disabled = false, agentActive = false }: SettingsPanelProps) {
+export default function SettingsPanel({ settings, onChange, onOneClickHumanize, onSaveModels, disabled = false, agentActive = false }: SettingsPanelProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  const handleSaveModels = async () => {
+    if (!onSaveModels) return;
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      await onSaveModels();
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const update = (partial: Partial<HumanizeSettings>) => {
     onChange({ ...settings, ...partial });
   };
@@ -584,6 +601,25 @@ export default function SettingsPanel({ settings, onChange, onOneClickHumanize, 
               ))}
             </div>
           </div>
+          {onSaveModels && (
+            <button
+              onClick={handleSaveModels}
+              disabled={isSaving}
+              className={`w-full flex items-center justify-center gap-2 p-2.5 rounded-lg text-xs font-medium transition-all ${
+                saveSuccess
+                  ? 'bg-emerald-600/30 border border-emerald-500/50 text-emerald-300'
+                  : 'bg-violet-600/20 border border-violet-500/40 text-violet-300 hover:bg-violet-600/30 hover:border-violet-500/60'
+              } disabled:opacity-50`}
+            >
+              {saveSuccess ? (
+                <><Check className="w-3.5 h-3.5" /> Saved!</>
+              ) : isSaving ? (
+                <>Saving...</>
+              ) : (
+                <><Save className="w-3.5 h-3.5" /> Save Model Settings</>
+              )}
+            </button>
+          )}
         </div>
       </CollapsibleSection>
     </div>
