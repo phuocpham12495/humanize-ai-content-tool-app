@@ -66,6 +66,86 @@ function removeWhiteBackground(logoDataUrl: string): Promise<string> {
   });
 }
 
+/**
+ * Overlay a caption banner in the lower-center of the image.
+ * Pink background (#F5A0C0), dark serif italic text, centered on the image.
+ * Style matches the reference: bold italic serif, pink strip, overlaid on image.
+ */
+function overlayCaption(imageDataUrl: string, caption: string): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d')!;
+
+      // Draw the original image
+      ctx.drawImage(img, 0, 0);
+
+      // Measure text to determine bar size
+      const fontSize = Math.round(img.width * 0.032);
+      ctx.font = `italic 700 ${fontSize}px "Georgia", "Times New Roman", "Playfair Display", serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      // Word-wrap: split caption into lines that fit within 85% image width
+      const maxTextWidth = img.width * 0.85;
+      const words = caption.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      for (const word of words) {
+        const test = currentLine ? `${currentLine} ${word}` : word;
+        if (ctx.measureText(test.toUpperCase()).width > maxTextWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = test;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+
+      // Bar dimensions
+      const lineHeight = fontSize * 1.35;
+      const paddingV = fontSize * 0.5;
+      const paddingH = fontSize * 0.8;
+      const barHeight = lines.length * lineHeight + paddingV * 2;
+
+      // Find the widest line for bar width
+      let maxLineWidth = 0;
+      for (const line of lines) {
+        const w = ctx.measureText(line.toUpperCase()).width;
+        if (w > maxLineWidth) maxLineWidth = w;
+      }
+      const barWidth = Math.min(img.width, maxLineWidth + paddingH * 2);
+
+      // Position: horizontally centered, vertically at ~70% of image height
+      const barX = (img.width - barWidth) / 2;
+      const barY = img.height * 0.70 - barHeight / 2;
+
+      // Draw pink background bar
+      ctx.fillStyle = '#F2A4BF';
+      ctx.fillRect(barX, barY, barWidth, barHeight);
+
+      // Draw thin dark border around bar
+      ctx.strokeStyle = '#2d2040';
+      ctx.lineWidth = Math.max(2, Math.round(img.width * 0.003));
+      ctx.strokeRect(barX, barY, barWidth, barHeight);
+
+      // Draw text lines — dark serif italic, uppercase
+      ctx.fillStyle = '#2d2040';
+      for (let i = 0; i < lines.length; i++) {
+        const textY = barY + paddingV + lineHeight * (i + 0.5);
+        ctx.fillText(lines[i].toUpperCase(), img.width / 2, textY);
+      }
+
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(imageDataUrl);
+    img.src = imageDataUrl;
+  });
+}
+
 async function overlayLogo(imageDataUrl: string, logoDataUrl: string): Promise<string> {
   // Pre-process logo: remove white background
   const cleanLogoUrl = await removeWhiteBackground(logoDataUrl);
@@ -296,7 +376,7 @@ function ImageSlot({ index, slot, onGenerate, onDownload, onEditPrompt, disabled
       <div className="flex gap-2">
         <button
           onClick={() => onGenerate(index)}
-          disabled={disabled || slot.status === 'loading'}
+          disabled={disabled || slot.status === 'loading' || !slot.prebuiltPrompt}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white"
         >
           {slot.status === 'loading'
@@ -432,6 +512,12 @@ export default function ImageGenerator({ humanizedText, geminiModel, geminiImage
 
       if (logoDataUrl) {
         dataUrl = await overlayLogo(dataUrl, logoDataUrl);
+      }
+
+      // Overlay caption bar at the bottom
+      const captionText = slot.caption || slot.prebuiltCaption || '';
+      if (captionText) {
+        dataUrl = await overlayCaption(dataUrl, captionText);
       }
 
       setSlots(prev => prev.map((s, i) =>
