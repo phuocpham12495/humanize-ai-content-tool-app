@@ -14,8 +14,10 @@ import VideoGenerator from '@/components/VideoGenerator';
 import {
   humanizeText, humanizeTextStream, analyzeText, checkHealth,
   generateWithAgentStream, generateWithAgent,
-  loadModelSettings, saveModelSettings
+  loadModelSettings, saveModelSettings, loadAvailableModels,
+  AvailableModel
 } from '@/lib/api';
+import { ModelOption } from '@/components/SettingsPanel';
 import { defaultSettings, HumanizeSettings, AnalysisResult, OutputScores } from '@/types';
 
 export default function Home() {
@@ -32,16 +34,34 @@ export default function Home() {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
   const [agentManagerOpen, setAgentManagerOpen] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
+  const [availableGeminiModels, setAvailableGeminiModels] = useState<ModelOption[]>([]);
+  const [availableImagenModels, setAvailableImagenModels] = useState<ModelOption[]>([]);
+  const [modelsSource, setModelsSource] = useState('default');
 
-  // Check backend health and load saved model settings on mount
+  // Load available models from API
+  const fetchAvailableModels = useCallback(async () => {
+    try {
+      const res = await loadAvailableModels();
+      setAvailableGeminiModels(res.geminiModels);
+      setAvailableImagenModels(res.imagenModels);
+      setModelsSource(res.source);
+    } catch {
+      // Keep existing or fallback
+    }
+  }, []);
+
+  // Check backend health, load saved model settings + available models on mount
   useEffect(() => {
     checkHealth()
       .then(() => {
         setBackendStatus('ok');
-        return loadModelSettings();
+        return Promise.all([loadModelSettings(), loadAvailableModels()]);
       })
-      .then(({ geminiModel, geminiImageModel }) => {
-        setSettings(prev => ({ ...prev, geminiModel: geminiModel as any, geminiImageModel: geminiImageModel as any }));
+      .then(([savedModels, available]) => {
+        setSettings(prev => ({ ...prev, geminiModel: savedModels.geminiModel as any, geminiImageModel: savedModels.geminiImageModel as any }));
+        setAvailableGeminiModels(available.geminiModels);
+        setAvailableImagenModels(available.imagenModels);
+        setModelsSource(available.source);
       })
       .catch(() => setBackendStatus('error'));
   }, []);
@@ -86,10 +106,10 @@ export default function Home() {
           onChunk: t => setHumanizedText(prev => prev + t),
           onStatus: () => {},
           onDone: t => { setHumanizedText(t); setIsHumanizing(false); },
-          onError: () => {
+          onError: (streamErr) => {
             generateWithAgent(selectedAgentId, inputText)
               .then(r => setHumanizedText(r.generatedText))
-              .catch((e: any) => setError(e.message || 'Agent generation failed'))
+              .catch((e: any) => setError(e.details || e.message || streamErr || 'Agent generation failed'))
               .finally(() => setIsHumanizing(false));
           }
         }
@@ -110,7 +130,7 @@ export default function Home() {
           if (!sessionId) setSessionId(result.sessionId);
           setIsHumanizing(false);
         },
-        onError: () => {
+        onError: (streamErr) => {
           humanizeText(inputText, settings, sessionId || undefined)
             .then(result => {
               setHumanizedText(result.humanizedText);
@@ -118,7 +138,7 @@ export default function Home() {
               if (!sessionId) setSessionId(result.sessionId);
             })
             .catch((err: any) => {
-              setError(err.details || err.message || 'Humanization failed. Make sure the backend is running.');
+              setError(err.details || err.message || streamErr || 'Humanization failed. Make sure the backend is running.');
             })
             .finally(() => setIsHumanizing(false));
         }
@@ -292,6 +312,10 @@ export default function Home() {
               onChange={setSettings}
               onOneClickHumanize={inputText.trim() ? handleOneClickHumanize : undefined}
               onSaveModels={handleSaveModels}
+              onRefreshModels={fetchAvailableModels}
+              availableGeminiModels={availableGeminiModels}
+              availableImagenModels={availableImagenModels}
+              modelsSource={modelsSource}
               disabled={isAnalyzing || isHumanizing}
               agentActive={!!selectedAgentId}
             />

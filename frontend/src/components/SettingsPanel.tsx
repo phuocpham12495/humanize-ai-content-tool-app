@@ -3,18 +3,28 @@
 import { useState } from 'react';
 import {
   ChevronDown, ChevronRight, Pen, Monitor, Sliders,
-  Zap, User, Globe, Sparkles, Fingerprint, Cpu, Save, Check
+  Zap, User, Globe, Sparkles, Fingerprint, Cpu, Save, Check, RefreshCw
 } from 'lucide-react';
 import {
   HumanizeSettings, WritingStyle, Platform, Persona,
   CulturalTone, OneClickMode, GeminiModel, GeminiImageModel
 } from '@/types';
 
+export interface ModelOption {
+  id: string;
+  name: string;
+  desc: string;
+}
+
 interface SettingsPanelProps {
   settings: HumanizeSettings;
   onChange: (settings: HumanizeSettings) => void;
   onOneClickHumanize?: (settings: HumanizeSettings) => void;
   onSaveModels?: () => Promise<void>;
+  onRefreshModels?: () => Promise<void>;
+  availableGeminiModels?: ModelOption[];
+  availableImagenModels?: ModelOption[];
+  modelsSource?: string;
   disabled?: boolean;
   agentActive?: boolean;
 }
@@ -145,18 +155,13 @@ const personas: { value: Persona; label: string; desc: string }[] = [
   { value: 'skeptic', label: 'Skeptic', desc: 'Questioning & bold' },
 ];
 
-const geminiModels: { value: GeminiModel; label: string; desc: string; badge?: string }[] = [
-  { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', desc: 'Fast & smart (recommended)', badge: 'Default' },
-  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', desc: 'Most capable, slower' },
-  { value: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', desc: 'Balanced performance' },
-  { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash', desc: 'Lightweight & fast' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', desc: 'Stable & reliable' },
+const fallbackGeminiModels: ModelOption[] = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', desc: 'Fast & smart (recommended)' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', desc: 'Most capable, slower' },
 ];
 
-const geminiImageModels: { value: GeminiImageModel; label: string; desc: string; badge?: string }[] = [
-  { value: 'imagen-4.0-fast-generate-001', label: 'Imagen 4 Fast', desc: 'Quick generation (recommended)', badge: 'Default' },
-  { value: 'imagen-4.0-generate-001', label: 'Imagen 4', desc: 'Higher quality, slower' },
-  { value: 'imagen-3.0-generate-001', label: 'Imagen 3', desc: 'Stable & consistent' },
+const fallbackImagenModels: ModelOption[] = [
+  { id: 'imagen-4.0-fast-generate-001', name: 'Imagen 4 Fast', desc: 'Quick generation (recommended)' },
 ];
 
 const culturalTones: { value: CulturalTone; label: string; emoji: string }[] = [
@@ -172,9 +177,17 @@ const oneclickModes: { value: OneClickMode; label: string; emoji: string; color:
   { value: 'relatable', label: 'Make it Relatable', emoji: '❤️', color: 'from-emerald-600 to-teal-600' },
 ];
 
-export default function SettingsPanel({ settings, onChange, onOneClickHumanize, onSaveModels, disabled = false, agentActive = false }: SettingsPanelProps) {
+export default function SettingsPanel({
+  settings, onChange, onOneClickHumanize, onSaveModels, onRefreshModels,
+  availableGeminiModels, availableImagenModels, modelsSource,
+  disabled = false, agentActive = false
+}: SettingsPanelProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const geminiModels = availableGeminiModels && availableGeminiModels.length > 0 ? availableGeminiModels : fallbackGeminiModels;
+  const imagenModels = availableImagenModels && availableImagenModels.length > 0 ? availableImagenModels : fallbackImagenModels;
 
   const handleSaveModels = async () => {
     if (!onSaveModels) return;
@@ -549,54 +562,61 @@ export default function SettingsPanel({ settings, onChange, onOneClickHumanize, 
         icon={<Cpu className="w-4 h-4" />}
       >
         <div className="space-y-4">
+          {/* Header with source badge + refresh */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">
+              {modelsSource === 'live' ? 'Live from Gemini API' : 'Default models'}
+            </span>
+            {onRefreshModels && (
+              <button
+                onClick={async () => { setIsRefreshing(true); await onRefreshModels().finally(() => setIsRefreshing(false)); }}
+                disabled={isRefreshing}
+                className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors disabled:opacity-50"
+              >
+                <RefreshCw className={`w-3 h-3 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Loading...' : 'Refresh'}
+              </button>
+            )}
+          </div>
+
           <div>
             <label className="text-xs text-gray-400 block mb-1.5">Text Generation Model</label>
-            <div className="space-y-1">
+            <div className="space-y-1 max-h-48 overflow-y-auto">
               {geminiModels.map((m) => (
                 <button
-                  key={m.value}
-                  onClick={() => update({ geminiModel: m.value })}
+                  key={m.id}
+                  onClick={() => update({ geminiModel: m.id as any })}
                   className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-all ${
-                    settings.geminiModel === m.value
+                    settings.geminiModel === m.id
                       ? 'bg-violet-600/30 border border-violet-500/50 text-violet-200'
                       : 'bg-gray-800/50 border border-transparent hover:border-gray-700 text-gray-400 hover:text-gray-300'
                   }`}
                 >
-                  <div>
-                    <div className="text-xs font-medium">{m.label}</div>
-                    <div className="text-xs opacity-60">{m.desc}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium truncate">{m.name}</div>
+                    <div className="text-xs opacity-60 truncate">{m.desc}</div>
                   </div>
-                  {m.badge && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/30 flex-shrink-0">
-                      {m.badge}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>
           </div>
           <div>
             <label className="text-xs text-gray-400 block mb-1.5">Image Generation Model</label>
-            <div className="space-y-1">
-              {geminiImageModels.map((m) => (
+            <div className="space-y-1 max-h-48 overflow-y-auto">
+              {imagenModels.map((m) => (
                 <button
-                  key={m.value}
-                  onClick={() => update({ geminiImageModel: m.value })}
+                  key={m.id}
+                  onClick={() => update({ geminiImageModel: m.id as any })}
                   className={`w-full flex items-center justify-between p-2 rounded-lg text-left transition-all ${
-                    settings.geminiImageModel === m.value
+                    settings.geminiImageModel === m.id
                       ? 'bg-violet-600/30 border border-violet-500/50 text-violet-200'
                       : 'bg-gray-800/50 border border-transparent hover:border-gray-700 text-gray-400 hover:text-gray-300'
                   }`}
                 >
-                  <div>
-                    <div className="text-xs font-medium">{m.label}</div>
-                    <div className="text-xs opacity-60">{m.desc}</div>
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium truncate">{m.name}</div>
+                    <div className="text-xs opacity-60 truncate">{m.desc}</div>
                   </div>
-                  {m.badge && (
-                    <span className="text-xs px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/30 flex-shrink-0">
-                      {m.badge}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>

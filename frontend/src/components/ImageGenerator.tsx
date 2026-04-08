@@ -422,6 +422,7 @@ export default function ImageGenerator({ humanizedText, geminiModel, geminiImage
   const [logoName, setLogoName] = useState('');
   const [isGeneratingPrompts, setIsGeneratingPrompts] = useState(false);
   const [promptsGenerated, setPromptsGenerated] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Sync slot count when settings.count changes — preserve existing prompt data
@@ -471,6 +472,7 @@ export default function ImageGenerator({ humanizedText, geminiModel, geminiImage
   const handleGeneratePrompts = useCallback(async () => {
     if (!humanizedText.trim()) return;
     setIsGeneratingPrompts(true);
+    setPromptError(null);
 
     try {
       const res = await generateImagePrompts(humanizedText, settings, geminiModel);
@@ -489,7 +491,7 @@ export default function ImageGenerator({ humanizedText, geminiModel, geminiImage
       }));
       setPromptsGenerated(true);
     } catch (err: any) {
-      console.error('Prompt generation failed:', err);
+      setPromptError(err.details || err.message || 'Lỗi tạo prompt ảnh');
     } finally {
       setIsGeneratingPrompts(false);
     }
@@ -753,6 +755,13 @@ export default function ImageGenerator({ humanizedText, geminiModel, geminiImage
             </>
           )}
         </button>
+        {promptError && (
+          <div className="flex items-center gap-2 p-2.5 bg-red-950/40 border border-red-800/50 rounded-lg text-xs text-red-300">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="flex-1">{promptError}</span>
+            <button onClick={() => setPromptError(null)} className="text-red-400 hover:text-red-300 text-xs flex-shrink-0">Dismiss</button>
+          </div>
+        )}
       </div>
 
       {/* ── Step 2: Image slots grid ────────────────────────────────────── */}

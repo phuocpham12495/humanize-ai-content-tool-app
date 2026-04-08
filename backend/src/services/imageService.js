@@ -1,13 +1,7 @@
 require('dotenv').config();
 
-const VALID_IMAGEN_MODELS = [
-  'imagen-4.0-fast-generate-001',
-  'imagen-4.0-generate-001',
-  'imagen-3.0-generate-001',
-];
-
 function resolveImagenModel(modelId) {
-  return VALID_IMAGEN_MODELS.includes(modelId) ? modelId : 'imagen-4.0-fast-generate-001';
+  return (typeof modelId === 'string' && modelId.startsWith('imagen-')) ? modelId : 'imagen-4.0-fast-generate-001';
 }
 
 const IMAGEN_MODEL = 'imagen-4.0-fast-generate-001';
@@ -38,8 +32,7 @@ async function extractImageConcept(text, contentType, geminiModel) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
-  const validGeminiModels = ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
-  const resolvedModel = validGeminiModels.includes(geminiModel) ? geminiModel : 'gemini-2.5-flash';
+  const resolvedModel = (typeof geminiModel === 'string' && geminiModel.startsWith('gemini-')) ? geminiModel : 'gemini-2.5-flash';
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: resolvedModel });
@@ -207,8 +200,7 @@ async function generatePrompts(opts) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
-  const validGeminiModels = ['gemini-2.5-flash','gemini-2.5-pro','gemini-2.0-flash','gemini-1.5-flash','gemini-1.5-pro'];
-  const resolvedGeminiModel = validGeminiModels.includes(geminiModel) ? geminiModel : 'gemini-2.5-flash';
+  const resolvedGeminiModel = (typeof geminiModel === 'string' && geminiModel.startsWith('gemini-')) ? geminiModel : 'gemini-2.5-flash';
 
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: resolvedGeminiModel });

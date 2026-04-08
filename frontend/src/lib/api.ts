@@ -139,6 +139,8 @@ export function humanizeTextStream(
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let currentEvent = '';
+      let completed = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -149,25 +151,42 @@ export function humanizeTextStream(
         buffer = lines.pop() || '';
 
         for (const line of lines) {
-          if (line.startsWith('event: ')) continue;
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+            continue;
+          }
           if (line.startsWith('data: ')) {
             try {
               const payload = JSON.parse(line.slice(6));
-              // Find the event type from previous line (simplified: check payload shape)
-              if (payload.text !== undefined) {
-                callbacks.onChunk(payload.text);
-              } else if (payload.humanizedText !== undefined) {
-                callbacks.onDone({
-                  humanizedText: payload.humanizedText,
-                  scores: payload.scores,
-                  sessionId: payload.sessionId
-                });
-              } else if (payload.message !== undefined && payload.sessionId === undefined) {
-                callbacks.onStatus(payload.message);
+              switch (currentEvent) {
+                case 'chunk':
+                  if (payload.text !== undefined) callbacks.onChunk(payload.text);
+                  break;
+                case 'done':
+                  completed = true;
+                  callbacks.onDone({
+                    humanizedText: payload.humanizedText,
+                    scores: payload.scores,
+                    sessionId: payload.sessionId
+                  });
+                  break;
+                case 'error':
+                  completed = true;
+                  callbacks.onError(payload.message || 'Streaming failed');
+                  break;
+                case 'status':
+                  if (payload.message) callbacks.onStatus(payload.message);
+                  break;
               }
             } catch {}
+            currentEvent = '';
           }
         }
+      }
+
+      // Safety: if stream ended without done/error, notify as error
+      if (!completed) {
+        callbacks.onError('Stream ended unexpectedly');
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {
@@ -354,6 +373,8 @@ export function generateWithAgentStream(
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let currentEvent = '';
+      let completed = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -362,14 +383,36 @@ export function generateWithAgentStream(
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
         for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+            continue;
+          }
           if (!line.startsWith('data: ')) continue;
           try {
             const payload = JSON.parse(line.slice(6));
-            if (payload.text !== undefined) callbacks.onChunk(payload.text);
-            else if (payload.generatedText !== undefined) callbacks.onDone(payload.generatedText);
-            else if (payload.message !== undefined && payload.generatedText === undefined) callbacks.onStatus(payload.message);
+            switch (currentEvent) {
+              case 'chunk':
+                if (payload.text !== undefined) callbacks.onChunk(payload.text);
+                break;
+              case 'done':
+                completed = true;
+                if (payload.generatedText !== undefined) callbacks.onDone(payload.generatedText);
+                break;
+              case 'error':
+                completed = true;
+                callbacks.onError(payload.message || 'Generation failed');
+                break;
+              case 'status':
+                if (payload.message) callbacks.onStatus(payload.message);
+                break;
+            }
           } catch {}
+          currentEvent = '';
         }
+      }
+
+      if (!completed) {
+        callbacks.onError('Stream ended unexpectedly');
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') callbacks.onError(err.message || 'Stream failed');
@@ -422,6 +465,21 @@ export async function saveModelSettings(geminiModel: string, geminiImageModel: s
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ geminiModel, geminiImageModel })
   });
+}
+
+export interface AvailableModel {
+  id: string;
+  name: string;
+  desc: string;
+}
+
+export async function loadAvailableModels(): Promise<{
+  geminiModels: AvailableModel[];
+  imagenModels: AvailableModel[];
+  source: string;
+}> {
+  const response = await fetch(`${API_URL}/api/settings/available-models`);
+  return handleResponse(response);
 }
 
 export { ApiError };
