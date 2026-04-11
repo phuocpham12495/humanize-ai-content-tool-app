@@ -6,6 +6,7 @@ const agentRoutes = require('./routes/agents');
 const imageRoutes = require('./routes/images');
 const videoRoutes = require('./routes/videos');
 const settingsRoutes = require('./routes/settings');
+const promptLogRoutes = require('./routes/promptLogs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -33,6 +34,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/videos', videoRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/prompt-logs', promptLogRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

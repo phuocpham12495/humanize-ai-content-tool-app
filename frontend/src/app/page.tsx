@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Sparkles, Zap, Activity, Bot, Image, Film } from 'lucide-react';
+import { Sparkles, Zap, Activity, Bot, Image, Film, ScrollText } from 'lucide-react';
 import TextInput from '@/components/TextInput';
 import SettingsPanel from '@/components/SettingsPanel';
 import OutputPanel from '@/components/OutputPanel';
@@ -11,6 +11,7 @@ import ActionButtons from '@/components/ActionButtons';
 import AgentManager from '@/components/AgentManager';
 import ImageGenerator from '@/components/ImageGenerator';
 import VideoGenerator from '@/components/VideoGenerator';
+import PromptLogPanel from '@/components/PromptLogPanel';
 import {
   humanizeText, humanizeTextStream, analyzeText, checkHealth,
   generateWithAgentStream, generateWithAgent,
@@ -28,7 +29,7 @@ export default function Home() {
   const [scores, setScores] = useState<OutputScores | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isHumanizing, setIsHumanizing] = useState(false);
-  const [activeView, setActiveView] = useState<'output' | 'comparison' | 'analysis' | 'images' | 'videos'>('output');
+  const [activeView, setActiveView] = useState<'output' | 'comparison' | 'analysis' | 'images' | 'videos' | 'prompt-log'>('output');
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'ok' | 'error'>('checking');
@@ -392,6 +393,17 @@ export default function Home() {
                 <Film className="w-3.5 h-3.5" />
                 Videos
               </button>
+              <button
+                onClick={() => setActiveView('prompt-log')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-t-lg text-xs font-medium border-b-2 transition-all ${
+                  activeView === 'prompt-log'
+                    ? 'text-orange-400 border-orange-500 bg-orange-950/20'
+                    : 'text-gray-500 border-transparent hover:text-gray-400 hover:border-gray-700'
+                }`}
+              >
+                <ScrollText className="w-3.5 h-3.5" />
+                Prompt Log
+              </button>
             </div>
 
             {/* Panel content */}
@@ -428,6 +440,9 @@ export default function Home() {
                   humanizedText={humanizedText}
                   geminiModel={settings.geminiModel}
                 />
+              )}
+              {activeView === 'prompt-log' && (
+                <PromptLogPanel />
               )}
             </div>
           </div>

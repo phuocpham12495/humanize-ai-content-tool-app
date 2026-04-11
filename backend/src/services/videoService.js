@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { addPromptLog } = require('../db/database');
 
 const VEO_VISUAL_STYLE_HINTS = {
   anime: 'anime art style, vibrant colors, cel-shading, Studio Ghibli atmosphere, expressive and cinematic',
@@ -55,15 +56,26 @@ async function generateVideoPrompts(opts) {
 
   const cinematographyOptions = VEO_CINEMATOGRAPHY_BY_CONTENT[contentType] || VEO_CINEMATOGRAPHY_BY_CONTENT.custom;
 
-  const prompt = `You are an expert Veo3 video prompt engineer. Given the following text content, generate ${count} UNIQUE Veo3 video prompts.
+  const prompt = `You are an expert Veo3 video prompt engineer. Given the following text content, generate ${count} UNIQUE Veo3 video prompts that all feature the SAME consistent narrator character.
 
-Each prompt MUST follow this formula exactly:
-[Cinematography] + [Subject] + [Action] + [Context] + [Style & Ambiance]
+STEP 1 — CREATE A BASE CHARACTER:
+First, invent ONE narrator character inspired by the text. Define their:
+- Gender, approximate age, ethnicity/skin tone
+- Hair style and color
+- Clothing and accessories (be specific)
+- Distinguishing features (e.g. glasses, tattoo, scar, jewelry)
+- Overall vibe/energy
+
+This character MUST appear in EVERY video prompt with the EXACT SAME appearance description. They are the storyteller — the thread connecting all scenes.
+
+STEP 2 — GENERATE ${count} VIDEO PROMPTS:
+Each prompt MUST follow this formula:
+[Cinematography] + [Character description] + [Action] + [Context] + [Style & Ambiance]
 
 Formula guide:
 - Cinematography: camera work and shot composition (e.g. Medium shot, Close-up, Tracking shot, Crane shot, POV shot, Dolly shot, Wide establishing shot)
-- Subject: the main character or focal point inspired by the text
-- Action: what the subject is doing (vivid, specific)
+- Character description: the SAME base character from Step 1 (repeat their key visual traits in each prompt)
+- Action: what the character is doing (vivid, specific, different per prompt)
 - Context: the environment, setting, background details
 - Style & Ambiance: overall aesthetic, mood, lighting — incorporate the visual style below
 
@@ -77,28 +89,49 @@ ${text.slice(0, 2000)}
 """
 
 Rules:
-- Each of the ${count} prompts must have a DIFFERENT cinematography technique and scene angle
+- The SAME character must appear in ALL ${count} prompts with consistent appearance
+- Each of the ${count} prompts must have a DIFFERENT cinematography technique, scene, and action
 - Each prompt should be 1-3 sentences, vivid and specific
+- Include the character's key visual details (hair, clothing, features) in EVERY prompt so they remain consistent
 - NO text, words, letters, captions, or typography should appear in the video
 - Generate exactly ${count} unique prompts
 
 Also for each prompt, extract a SHORT PUNCHY caption (max 20 words) — the most compelling or emotionally resonant line from the text. Make it standalone and quotable.
 
-Output ONLY valid JSON: an array of ${count} objects.
-Fields: "veoPrompt" (string), "caption" (string), "index" (number, 0-based).
-Example: [{"veoPrompt": "Medium shot, a tired student...", "caption": "Every late night is an investment.", "index": 0}]`;
+Output ONLY valid JSON with this structure:
+{
+  "character": "<full base character description from Step 1>",
+  "prompts": [{"veoPrompt": "...", "caption": "...", "index": 0}, ...]
+}
+Example:
+{
+  "character": "A young Vietnamese woman in her mid-20s with long black hair, wearing a cream turtleneck and round gold-rimmed glasses, warm expressive eyes",
+  "prompts": [{"veoPrompt": "Medium shot, a young Vietnamese woman with long black hair and round gold-rimmed glasses in a cream turtleneck, sitting at a cluttered desk...", "caption": "Every late night is an investment.", "index": 0}]
+}`;
 
+  const startTime = Date.now();
   const result = await model.generateContent(prompt);
   let raw = result.response.text().trim();
+  addPromptLog({ feature: 'video-prompts', model: resolvedModel, prompt, response: raw, durationMs: Date.now() - startTime });
 
   // Strip markdown code fences if present
   raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
 
   let prompts;
+  let baseCharacter = '';
   try {
-    prompts = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    // New format: { character, prompts: [...] }
+    if (parsed.character && Array.isArray(parsed.prompts)) {
+      baseCharacter = parsed.character;
+      prompts = parsed.prompts;
+    } else if (Array.isArray(parsed)) {
+      // Legacy fallback: array of prompts
+      prompts = parsed;
+    } else {
+      prompts = [{ veoPrompt: raw.slice(0, 500), caption: '', index: 0 }];
+    }
   } catch {
-    // Fallback: wrap the raw text as a single prompt
     prompts = [{ veoPrompt: raw.slice(0, 500), caption: '', index: 0 }];
   }
 
@@ -110,7 +143,7 @@ Example: [{"veoPrompt": "Medium shot, a tired student...", "caption": "Every lat
       index: prompts.length
     });
   }
-  prompts = prompts.slice(0, count).map((p, i) => ({ ...p, index: i }));
+  prompts = prompts.slice(0, count).map((p, i) => ({ ...p, index: i, baseCharacter }));
 
   return prompts;
 }

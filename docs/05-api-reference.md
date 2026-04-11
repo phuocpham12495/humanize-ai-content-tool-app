@@ -803,6 +803,120 @@ interface GeneratedVideoPrompt {
 
 ---
 
+## Prompt Logs API
+
+### GET /api/prompt-logs
+
+Lấy danh sách prompt logs (prompt thực tế gửi cho AI model + response).
+
+**Query Parameters**
+
+| Param | Kiểu | Mặc định | Mô tả |
+|-------|------|---------|-------|
+| `limit` | number | 100 | Số lượng entries (tối đa 500) |
+| `offset` | number | 0 | Offset cho pagination |
+
+**Response 200**
+
+```json
+{
+  "success": true,
+  "logs": [
+    {
+      "id": 1,
+      "feature": "humanize-stream",
+      "model": "gemini-2.5-flash",
+      "prompt": "You are a master content writer...",
+      "response": "Honestly? AI has changed everything...",
+      "status": "success",
+      "error_message": null,
+      "duration_ms": 3200,
+      "created_at": "2026-04-11T10:30:00.000"
+    }
+  ],
+  "total": 42,
+  "limit": 100,
+  "offset": 0
+}
+```
+
+**Feature values**: `analyze`, `humanize`, `humanize-stream`, `score`, `agent-generate`, `agent-generate-stream`, `image-concept`, `image-prompts`, `image-generate`, `video-prompts`
+
+---
+
+### DELETE /api/prompt-logs
+
+Xóa tất cả prompt logs.
+
+**Response 200**
+```json
+{ "success": true }
+```
+
+---
+
+## Settings API
+
+### GET /api/settings/models
+
+Lấy model settings đã lưu.
+
+**Response 200**
+```json
+{ "success": true, "geminiModel": "gemini-2.5-flash", "geminiImageModel": "imagen-4.0-fast-generate-001" }
+```
+
+---
+
+### PUT /api/settings/models
+
+Lưu model settings vào database.
+
+**Request**
+```json
+{ "geminiModel": "gemini-2.5-pro", "geminiImageModel": "imagen-4.0-generate-001" }
+```
+
+---
+
+### GET /api/settings/available-models
+
+Fetch danh sách model từ Gemini API (live). Fallback về danh sách mặc định nếu API lỗi.
+
+**Response 200**
+```json
+{
+  "success": true,
+  "geminiModels": [
+    { "id": "gemini-2.5-flash", "name": "Gemini 2.5 Flash", "desc": "..." }
+  ],
+  "imagenModels": [
+    { "id": "imagen-4.0-fast-generate-001", "name": "Imagen 4.0 Fast", "desc": "..." }
+  ],
+  "source": "api"
+}
+```
+
+---
+
+## TypeScript Interfaces (Prompt Logs)
+
+```typescript
+interface PromptLogEntry {
+  id: number;
+  feature: string;
+  model: string;
+  prompt: string;
+  response: string | null;
+  status: string;         // 'success' | 'error'
+  error_message: string | null;
+  duration_ms: number | null;
+  created_at: string;
+}
+```
+
+---
+
 ## Xác Thực
 
 Phiên bản hiện tại **không yêu cầu xác thực** (authentication). API key Gemini được lưu server-side, không expose ra client.

@@ -11,7 +11,7 @@
 
 | Phần mềm | Phiên bản tối thiểu | Kiểm tra |
 |----------|--------------------|---------:|
-| Node.js | v18.0.0+ | `node --version` |
+| Node.js | v22.5.0+ (for built-in `node:sqlite`) | `node --version` |
 | npm | v9.0.0+ | `npm --version` |
 | Git | Bất kỳ | `git --version` |
 
@@ -106,9 +106,20 @@ npm run dev
 
 Available routes:
   POST /api/humanize
+  POST /api/humanize/stream
   POST /api/analyze
   GET  /api/modes
+  GET  /api/history/:sessionId
   GET  /api/health
+  GET  /api/agents ...
+  POST /api/images/generate-prompts
+  POST /api/images/generate
+  POST /api/videos/generate-prompts
+  GET  /api/settings/models
+  PUT  /api/settings/models
+  GET  /api/settings/available-models
+  GET  /api/prompt-logs
+  DELETE /api/prompt-logs
 ```
 
 ### Terminal 2 — Frontend:
@@ -211,12 +222,14 @@ curl http://localhost:3001/api/modes
 
 ## Xử Lý Lỗi Thường Gặp
 
-### Lỗi: "Cannot find module 'better-sqlite3'"
+### Lỗi: "Cannot find module 'node:sqlite'" hoặc SQLite warnings
 ```bash
-# Windows có thể cần build tools
-npm install --global windows-build-tools
-# Hoặc cài Visual Studio Build Tools
-cd backend && npm rebuild better-sqlite3
+# node:sqlite yêu cầu Node.js >= 22.5
+node --version
+# Nếu version < 22.5, upgrade Node.js
+# Cài nvm (Windows: nvm-windows) rồi:
+nvm install 22
+nvm use 22
 ```
 
 ### Lỗi: "GEMINI_API_KEY environment variable is not set"

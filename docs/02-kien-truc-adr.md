@@ -39,14 +39,14 @@ Chọn **monorepo với tách biệt rõ ràng** giữa frontend (Next.js) và b
 
 ## ADR-002: Chọn SQLite thay vì PostgreSQL/MySQL
 
-**Trạng thái**: Accepted  
+**Trạng thái**: Accepted (Updated 2026-04-11)  
 **Ngày**: 2026-04-04
 
 ### Bối cảnh
-Cần lưu trữ: session history, preset configs. Lựa chọn database.
+Cần lưu trữ: session history, preset configs, prompt logs, app settings. Lựa chọn database.
 
 ### Quyết định
-Chọn **SQLite với better-sqlite3**.
+Chọn **SQLite với `node:sqlite`** (Node.js built-in module, available since Node 22.5).
 
 ### Các lựa chọn đã xem xét
 
@@ -55,13 +55,13 @@ Chọn **SQLite với better-sqlite3**.
 | PostgreSQL | Scale tốt, nhiều features | Over-engineering cho MVP, cần server riêng |
 | MySQL | Quen thuộc | Tương tự PostgreSQL |
 | MongoDB | Schema linh hoạt | Không cần NoSQL cho data có cấu trúc |
-| **SQLite (better-sqlite3)** | Zero-config, embedded, nhanh | Không scale cho multi-user production |
+| **SQLite (node:sqlite)** | Zero-config, embedded, nhanh, no native build | Không scale cho multi-user production |
 
 ### Lý do
 - Ứng dụng này là single-user hoặc low-concurrent tool
 - SQLite không cần cài đặt thêm (zero-config deployment)
-- `better-sqlite3` cung cấp API đồng bộ → code đơn giản hơn
-- Schema đơn giản: 2 bảng, không cần transactions phức tạp
+- `node:sqlite` (built-in) cung cấp API đồng bộ (`DatabaseSync`) → không cần native build tools
+- Schema: 6 bảng (configs, session_history, agents, agent_posts, app_settings, prompt_logs)
 
 ### Đánh đổi
 - Không scale tốt cho nhiều concurrent users
@@ -222,6 +222,11 @@ Layer 5: Human Fingerprint (Quirks + signature phrases)
 | `ImageGenerator.tsx` | Two-Phase UX | Generate Prompts → Generate Images (per slot) |
 | `VideoGenerator.tsx` | Single-Phase UX | Generate Prompts → Copy & use in Veo3 |
 | AgentManager | Overlay Disable Pattern | Frosted overlay khi Agent active → prevent settings conflict |
+| `promptLogs.js` | CRUD API Pattern | Simple REST cho log entries (GET list, DELETE clear) |
+| `PromptLogPanel.tsx` | Expandable List Pattern | Collapsible entries, filter, copy |
+| Prompt Logging | Instrumentation Pattern | Services tự log prompt/response, routes log cho streaming |
+| `settings.js` (available-models) | Live Fetch + Fallback | Fetch từ API, fallback về defaults |
+| `videoService.js` | Two-Step Generation | Step 1: base character → Step 2: N prompts with character |
 
 ---
 
@@ -290,4 +295,75 @@ Khi AI Agent được chọn, settings panel vẫn visible và settings vẫn đ
 - Style agent học được không bị contaminate bởi settings
 - UX rõ ràng: user biết rõ mình đang dùng mode nào
 - Dễ debug: agent output = chỉ phụ thuộc vào training posts
+
+---
+
+## ADR-010: Prompt Logging — Observability cho AI Calls
+
+**Trạng thái**: Accepted  
+**Ngày**: 2026-04-11
+
+### Bối cảnh
+Người dùng không thể thấy prompt thực tế gửi cho AI model. Khi output không như mong muốn, không có cách debug.
+
+### Quyết định
+Log tất cả AI prompts + responses vào bảng `prompt_logs` trong SQLite. Hiển thị trong tab "Prompt Log" trên frontend.
+
+### Thiết kế
+- **Backend instrumentation**: Mỗi service function (analyze, humanize, score, image, video, agent) tự log sau khi gọi AI
+- **Streaming**: Log prompt lúc bắt đầu, response sau khi stream hoàn thành (accumulate full text)
+- **Schema**: `feature`, `model`, `prompt` (full text), `response` (full text hoặc `[image binary data]`), `status`, `error_message`, `duration_ms`
+- **Frontend**: Expandable entries với copy, filter by feature, refresh, clear
+
+### Lý do
+- Debug prompts mà không cần console.log thủ công
+- Track model usage và performance (duration_ms)
+- Giáo dục: user thấy prompt thực tế AI nhận được
+
+### Đánh đổi
+- Database size tăng nhanh (prompts + responses dài) → Clear button
+- Prompt text có thể chứa user data nhạy cảm → Local SQLite only, không gửi ra ngoài
+
+---
+
+## ADR-011: Dynamic Model Fetching thay vì Hardcoded List
+
+**Trạng thái**: Accepted  
+**Ngày**: 2026-04-11
+
+### Bối cảnh
+Danh sách model Gemini và Imagen được hardcode. Khi Google thêm model mới, cần update code.
+
+### Quyết định
+Fetch danh sách model live từ Gemini API (`/v1beta/models`), phân loại tự động, fallback về danh sách mặc định.
+
+### Lợi ích
+- Model mới tự động xuất hiện
+- Không cần deploy lại khi Google thêm model
+- Prefix-based validation (`gemini-*`, `imagen-*`) thay vì whitelist
+
+---
+
+## ADR-012: Video Character Consistency
+
+**Trạng thái**: Accepted  
+**Ngày**: 2026-04-11
+
+### Bối cảnh
+Video prompts tạo ra mỗi clip với nhân vật khác nhau → không cohesive cho video series.
+
+### Quyết định
+Yêu cầu Gemini tạo **base character description** trước, sau đó embed character traits vào mỗi video prompt.
+
+### Output format
+```json
+{
+  "character": "Full character description...",
+  "prompts": [{"veoPrompt": "...character traits repeated...", "caption": "...", "index": 0}]
+}
+```
+
+### Lợi ích
+- Tất cả video prompts có cùng nhân vật kể chuyện
+- Character traits lặp lại trong mỗi prompt → Veo3 render nhất quán
 

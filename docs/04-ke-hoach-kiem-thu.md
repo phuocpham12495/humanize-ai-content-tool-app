@@ -28,6 +28,16 @@
 | TC016 | Tone playground: Humor, Formality, Emotion sliders | ✅ Implemented |
 | TC017 | Comprehensive score: humanScore, aiDetectability, engagementPotential | ✅ Implemented |
 | TC018 | Facebook viral: hook, curiosity gap, emotional triggers, CTA | ✅ Implemented |
+| TC019 | Model selection: geminiModel/geminiImageModel applied to all features | ✅ Implemented |
+| TC020 | Save/Load model settings to/from database | ✅ Implemented |
+| TC021 | Dynamic model fetching from Gemini API | ✅ Implemented |
+| TC022 | SSE error events properly parsed (not swallowed as status) | ✅ Implemented |
+| TC023 | Error display with actual reason in all features | ✅ Implemented |
+| TC024 | Image caption overlay (pink banner, serif font) | ✅ Implemented |
+| TC025 | Logo transparent background (remove white) | ✅ Implemented |
+| TC026 | Image generate disabled without prompt | ✅ Implemented |
+| TC027 | Video character consistency (base character across all prompts) | ✅ Implemented |
+| TC028 | Prompt Log tab: view all AI prompts and responses with timing | ✅ Implemented |
 
 ---
 

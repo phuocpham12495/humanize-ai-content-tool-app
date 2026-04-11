@@ -425,3 +425,94 @@ SELECT id, name, avatar_emoji, platform FROM agents;
 # Xem posts của agent:
 SELECT agent_id, title, substr(content,1,50) FROM agent_posts;
 ```
+
+---
+
+## Cập Nhật v5.0.0 — Prompt Log + Model Management + Character Consistency
+
+### Luồng Prompt Logging
+
+```
+Mỗi AI service function (geminiService, imageService, videoService):
+  1. Ghi nhận startTime = Date.now()
+  2. Gọi AI model (generateContent / callImagen)
+  3. Tính durationMs = Date.now() - startTime
+  4. addPromptLog({ feature, model, prompt, response, durationMs })
+
+Đặc biệt cho streaming:
+  - humanizeTextStream() trả về { stream, _logMeta }
+  - Route accumulate fullText từ stream chunks
+  - Sau khi stream done → addPromptLog({ ..._logMeta, response: fullText })
+```
+
+### Cây Component cập nhật
+
+```
+page.tsx
+  └── Right panel tabs:
+      ├── Output
+      ├── Analysis
+      ├── Compare
+      ├── Images
+      ├── Videos
+      └── Prompt Log (MỚI — luôn accessible)
+            └── PromptLogPanel.tsx
+                  ├── Filter dropdown (by feature)
+                  ├── Refresh / Clear buttons
+                  └── LogEntry[] (expandable prompt + response + copy)
+```
+
+### Luồng Dynamic Model Fetching
+
+```
+App khởi động (page.tsx useEffect):
+  Promise.all([loadModelSettings(), loadAvailableModels()])
+    ├── loadModelSettings() → GET /api/settings/models → setSetting geminiModel/geminiImageModel
+    └── loadAvailableModels() → GET /api/settings/available-models
+          └── Backend: fetch generativelanguage.googleapis.com/v1beta/models
+                ├── Filter: gemini-* → geminiModels
+                ├── Filter: imagen-* → imagenModels
+                └── Fallback: hardcoded defaults nếu API lỗi
+
+SettingsPanel:
+  ├── Gemini Model dropdown (scrollable, max-h-48)
+  ├── Imagen Model dropdown
+  ├── Refresh button → fetchAvailableModels()
+  └── Save button → saveModelSettings() → PUT /api/settings/models
+```
+
+### Video Character Consistency
+
+```
+videoService.generateVideoPrompts():
+  Gemini prompt:
+    STEP 1 — CREATE A BASE CHARACTER (gender, age, hair, clothing, features)
+    STEP 2 — GENERATE N PROMPTS (each includes character description)
+  
+  Output JSON:
+    { character: "...", prompts: [{veoPrompt, caption, index}] }
+  
+  Parse with backward compatibility:
+    if (parsed.character && parsed.prompts) → new format
+    else if (Array.isArray(parsed)) → legacy format
+  
+  Each prompt gets baseCharacter field for frontend reference
+```
+
+### Prompt Log — Kiểm tra Database
+
+```bash
+sqlite3 backend/data/humanize.db
+
+# Xem prompt logs gần nhất:
+SELECT id, feature, model, duration_ms, status, created_at FROM prompt_logs ORDER BY created_at DESC LIMIT 10;
+
+# Xem prompt thực tế:
+SELECT prompt FROM prompt_logs WHERE id = 1;
+
+# Xem response:
+SELECT response FROM prompt_logs WHERE id = 1;
+
+# Đếm theo feature:
+SELECT feature, COUNT(*) FROM prompt_logs GROUP BY feature;
+```

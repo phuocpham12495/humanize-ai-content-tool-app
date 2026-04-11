@@ -482,4 +482,30 @@ export async function loadAvailableModels(): Promise<{
   return handleResponse(response);
 }
 
+// ── Prompt Logs API ──────────────────────────────────────────────────────────
+
+export interface PromptLogEntry {
+  id: number;
+  feature: string;
+  model: string;
+  prompt: string;
+  response: string | null;
+  status: string;
+  error_message: string | null;
+  duration_ms: number | null;
+  created_at: string;
+}
+
+export async function getPromptLogs(limit = 100, offset = 0): Promise<{
+  logs: PromptLogEntry[];
+  total: number;
+}> {
+  const response = await fetch(`${API_URL}/api/prompt-logs?limit=${limit}&offset=${offset}`);
+  return handleResponse(response);
+}
+
+export async function clearPromptLogs(): Promise<void> {
+  await fetch(`${API_URL}/api/prompt-logs`, { method: 'DELETE' });
+}
+
 export { ApiError };

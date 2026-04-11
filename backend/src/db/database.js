@@ -58,6 +58,18 @@ db.exec(`
     value TEXT NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS prompt_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    feature TEXT NOT NULL,
+    model TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    response TEXT,
+    status TEXT DEFAULT 'success',
+    error_message TEXT,
+    duration_ms INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Seed default configs
@@ -263,10 +275,33 @@ function setSetting(key, value) {
   ).run(key, value);
 }
 
+// ── Prompt Logs ─────────────────────────────────────────────────────────────
+
+function addPromptLog({ feature, model, prompt, response, status = 'success', errorMessage, durationMs }) {
+  const stmt = db.prepare(
+    'INSERT INTO prompt_logs (feature, model, prompt, response, status, error_message, duration_ms) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  );
+  const result = stmt.run(feature, model, prompt, response || null, status, errorMessage || null, durationMs || null);
+  return result.lastInsertRowid;
+}
+
+function getPromptLogs(limit = 100, offset = 0) {
+  return db.prepare('SELECT * FROM prompt_logs ORDER BY created_at DESC LIMIT ? OFFSET ?').all(limit, offset);
+}
+
+function getPromptLogCount() {
+  return db.prepare('SELECT COUNT(*) as count FROM prompt_logs').get().count;
+}
+
+function clearPromptLogs() {
+  db.prepare('DELETE FROM prompt_logs').run();
+}
+
 module.exports = {
   db,
   getConfigs, getConfigByName, saveHistory, getHistory,
   listAgents, getAgent, createAgent, updateAgent, deleteAgent,
   addAgentPost, updateAgentPost, deleteAgentPost, getAgentPosts,
-  getSetting, setSetting
+  getSetting, setSetting,
+  addPromptLog, getPromptLogs, getPromptLogCount, clearPromptLogs
 };

@@ -16,6 +16,87 @@
 
 ---
 
+## Cập Nhật Phiên Bản 5.0.0 — 2026-04-11 (Prompt Log + Model Management + Character Consistency)
+
+### Tổng Quan
+Thêm **Prompt Log** tab hiển thị mọi prompt thực tế gửi cho AI model, tính năng **quản lý model động** (fetch live từ Gemini API), cải thiện **video prompt consistency** (base character), và nhiều UX fixes.
+
+### Tính Năng Mới: Prompt Log
+
+#### Backend
+- Bảng `prompt_logs` mới: `id, feature, model, prompt, response, status, error_message, duration_ms, created_at`
+- Tất cả services (geminiService, imageService, videoService) tự động log prompt + response
+- Hỗ trợ cả batch và streaming (stream log sau khi hoàn thành)
+- `addPromptLog()`, `getPromptLogs()`, `getPromptLogCount()`, `clearPromptLogs()` trong database.js
+
+#### Routes Mới (`/api/prompt-logs`)
+| Method | Path | Mô tả |
+|--------|------|-------|
+| GET | `/api/prompt-logs?limit=100&offset=0` | Lấy logs với pagination |
+| DELETE | `/api/prompt-logs` | Xóa tất cả logs |
+
+#### Frontend: `PromptLogPanel.tsx`
+- Tab **Prompt Log** (màu cam) — luôn accessible (không cần humanized text)
+- Mỗi entry: feature badge (color-coded), model name, duration, timestamp
+- **Expandable Prompt**: Hiển thị prompt thực tế gửi cho AI, nút Copy
+- **Expandable Response**: Hiển thị response từ AI model, nút Copy
+- Filter dropdown theo feature (Analyze, Humanize, Score, Image, Video, Agent...)
+- Nút Refresh + Clear
+
+#### Features được log
+| Feature ID | Mô tả |
+|-----------|-------|
+| `analyze` | Phân tích AI-likeness |
+| `humanize` | Humanize batch |
+| `humanize-stream` | Humanize streaming |
+| `score` | Chấm điểm output |
+| `agent-generate` | Agent batch |
+| `agent-generate-stream` | Agent streaming |
+| `image-concept` | Trích xuất concept ảnh |
+| `image-prompts` | Tạo N prompt ảnh |
+| `image-generate` | Gọi Imagen API |
+| `video-prompts` | Tạo N prompt video |
+
+### Tính Năng: Dynamic Model Fetching
+- Backend `GET /api/settings/available-models` gọi `https://generativelanguage.googleapis.com/v1beta/models` để lấy danh sách model live
+- Phân loại tự động: `gemini-*` → text models, `imagen-*` → image models
+- Nút **Refresh** trong SettingsPanel cập nhật danh sách model
+- Fallback về danh sách mặc định nếu API lỗi
+
+### Tính Năng: Lưu/Load Model Settings
+- Bảng `app_settings` (key-value) lưu `geminiModel` + `geminiImageModel`
+- `GET/PUT /api/settings/models` — load/save model settings
+- Nút **Save** explicit trong SettingsPanel
+- Auto-load khi app khởi động
+
+### Tính Năng: Video Character Consistency
+- Video prompts giờ có **base character** — một nhân vật kể chuyện nhất quán
+- Gemini tạo character description (giới tính, tuổi, tóc, quần áo, đặc điểm)
+- Mỗi prompt video lặp lại key visual traits của character
+- Output format: `{ character, prompts: [...] }` với backward compatibility
+
+### Fix: Caption Overlay trên ảnh
+- Pink banner (#F2A4BF) với border tối, bold italic serif uppercase
+- Vị trí 70% vertical, word-wrapped
+- Font size: `img.width * 0.032`
+
+### Fix: Logo transparent background
+- `removeWhiteBackground()`: Scan pixels, set alpha=0 cho near-white (R,G,B >= 240)
+
+### Fix: SSE Error Handling
+- SSE parser tracking `event:` lines với `currentEvent` variable + `switch` statement
+- Trước đó error events bị swallow thành status events → infinite loading
+- `onError` callbacks giờ capture error message thay vì bỏ qua
+
+### Fix: Error Display
+- Tất cả features (Analyze, Humanize, Compare, Images, Videos) show lý do lỗi thực tế
+- Image prompt generation errors có banner UI riêng
+
+### Fix: Disable Image Generate khi chưa có prompt
+- `!slot.prebuiltPrompt` thêm vào disabled condition
+
+---
+
 ## Cập Nhật Phiên Bản 4.0.0 — 2026-04-07 (Tính Năng: Video Prompt Generator + Fixes)
 
 ### Tổng Quan

@@ -1,4 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { addPromptLog } = require('../db/database');
 
 let genAI = null;
 
@@ -73,8 +74,16 @@ Scoring guidelines:
 For burstiness/perplexity/sentenceVariance: higher score = more human-like, lower = more AI-like.
 Identify at most 5 most suspicious sentences.`;
 
-  const result = await model.generateContent(prompt);
-  const responseText = result.response.text();
+  const startTime = Date.now();
+  let responseText;
+  try {
+    const result = await model.generateContent(prompt);
+    responseText = result.response.text();
+    addPromptLog({ feature: 'analyze', model: geminiModel || 'gemini-2.5-flash', prompt, response: responseText, durationMs: Date.now() - startTime });
+  } catch (err) {
+    addPromptLog({ feature: 'analyze', model: geminiModel || 'gemini-2.5-flash', prompt, status: 'error', errorMessage: err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
 
   return await parseJsonResponse(responseText);
 }
@@ -85,8 +94,16 @@ Identify at most 5 most suspicious sentences.`;
 async function humanizeText(text, settings = {}) {
   const model = getModel(settings.geminiModel);
   const prompt = await buildHumanizePrompt(text, settings);
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  const startTime = Date.now();
+  try {
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    addPromptLog({ feature: 'humanize', model: settings.geminiModel || 'gemini-2.5-flash', prompt, response: responseText, durationMs: Date.now() - startTime });
+    return responseText;
+  } catch (err) {
+    addPromptLog({ feature: 'humanize', model: settings.geminiModel || 'gemini-2.5-flash', prompt, status: 'error', errorMessage: err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
 }
 
 /**
@@ -94,11 +111,11 @@ async function humanizeText(text, settings = {}) {
  */
 async function humanizeTextStream(text, settings = {}) {
   const model = getModel(settings.geminiModel);
-  // Re-use the same prompt building logic by calling humanizeText internals
-  // We build the prompt here by temporarily duplicating the prompt construction
   const prompt = await buildHumanizePrompt(text, settings);
+  const startTime = Date.now();
   const result = await model.generateContentStream(prompt);
-  return result.stream;
+  // Return stream + metadata so caller can log the full response after streaming
+  return { stream: result.stream, _logMeta: { feature: 'humanize-stream', model: settings.geminiModel || 'gemini-2.5-flash', prompt, startTime } };
 }
 
 /**
@@ -233,8 +250,16 @@ Scoring rubric:
 
 Provide 2-3 improvements and 2-3 strengths maximum.`;
 
-  const result = await model.generateContent(prompt);
-  const responseText = result.response.text();
+  const startTime = Date.now();
+  let responseText;
+  try {
+    const result = await model.generateContent(prompt);
+    responseText = result.response.text();
+    addPromptLog({ feature: 'score', model: geminiModel || 'gemini-2.5-flash', prompt, response: responseText, durationMs: Date.now() - startTime });
+  } catch (err) {
+    addPromptLog({ feature: 'score', model: geminiModel || 'gemini-2.5-flash', prompt, status: 'error', errorMessage: err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
 
   return await parseJsonResponse(responseText);
 }
@@ -298,8 +323,16 @@ OUTPUT INSTRUCTIONS:
 async function generateWithAgentStyle(text, agent, settings = {}) {
   const model = getModel(settings.geminiModel);
   const prompt = buildAgentStylePrompt(text, agent, settings);
-  const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  const startTime = Date.now();
+  try {
+    const result = await model.generateContent(prompt);
+    const responseText = result.response.text().trim();
+    addPromptLog({ feature: 'agent-generate', model: settings.geminiModel || 'gemini-2.5-flash', prompt, response: responseText, durationMs: Date.now() - startTime });
+    return responseText;
+  } catch (err) {
+    addPromptLog({ feature: 'agent-generate', model: settings.geminiModel || 'gemini-2.5-flash', prompt, status: 'error', errorMessage: err.message, durationMs: Date.now() - startTime });
+    throw err;
+  }
 }
 
 /**
@@ -308,8 +341,9 @@ async function generateWithAgentStyle(text, agent, settings = {}) {
 async function generateWithAgentStyleStream(text, agent, settings = {}) {
   const model = getModel(settings.geminiModel);
   const prompt = buildAgentStylePrompt(text, agent, settings);
+  const startTime = Date.now();
   const result = await model.generateContentStream(prompt);
-  return result.stream;
+  return { stream: result.stream, _logMeta: { feature: 'agent-generate-stream', model: settings.geminiModel || 'gemini-2.5-flash', prompt, startTime } };
 }
 
 module.exports = {

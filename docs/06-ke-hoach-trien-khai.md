@@ -218,7 +218,7 @@ Một feature được coi là hoàn thành khi:
 
 ---
 
-## 7. Tính Năng Đã Hoàn Thành (v4.0.0 — 2026-04-07)
+## 7. Tính Năng Đã Hoàn Thành (v5.0.0 — 2026-04-11)
 
 | Tính năng | Ưu tiên | Trạng thái | Ghi chú |
 |-----------|---------|-----------|---------|
@@ -234,6 +234,15 @@ Một feature được coi là hoàn thành khi:
 | Max 12 ảnh/video | P2 | ✅ Done | Backend + frontend |
 | Streaming SSE (humanize + agent) | P0 | ✅ Done | AbortController cancel |
 | Diff view (ComparisonView) | P1 | ✅ Done | diff-match-patch word-level |
+| Prompt Log tab | P1 | ✅ Done | Log tất cả AI prompts + responses |
+| Dynamic model fetching | P1 | ✅ Done | Live fetch từ Gemini API |
+| Save/Load model settings | P1 | ✅ Done | Persist vào SQLite |
+| Video character consistency | P1 | ✅ Done | Base character across all prompts |
+| Caption overlay (pink banner) | P1 | ✅ Done | Canvas API, serif italic |
+| Logo transparent background | P1 | ✅ Done | removeWhiteBackground() |
+| SSE error handling fix | P0 | ✅ Done | event: tracking + switch |
+| Error display with reason | P0 | ✅ Done | All features show actual error |
+| Disable image generate without prompt | P1 | ✅ Done | prebuiltPrompt check |
 
 ## 8. Backlog (Chưa Implement)
 

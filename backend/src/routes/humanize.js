@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { analyzeText, humanizeText, scoreOutput, humanizeTextStream } = require('../services/geminiService');
-const { getConfigs, saveHistory, getHistory } = require('../db/database');
+const { getConfigs, saveHistory, getHistory, addPromptLog } = require('../db/database');
 const crypto = require('crypto');
 
 // POST /api/humanize
@@ -142,7 +142,7 @@ router.post('/humanize/stream', async (req, res) => {
     send('status', { message: 'Starting humanization...', sessionId: sid });
 
     // Stream the humanized text
-    const stream = await humanizeTextStream(text.trim(), effectiveSettings);
+    const { stream, _logMeta } = await humanizeTextStream(text.trim(), effectiveSettings);
     let fullText = '';
 
     for await (const chunk of stream) {
@@ -150,6 +150,9 @@ router.post('/humanize/stream', async (req, res) => {
       fullText += chunkText;
       send('chunk', { text: chunkText });
     }
+
+    // Log the streamed prompt + full response
+    addPromptLog({ ..._logMeta, response: fullText.trim(), durationMs: Date.now() - _logMeta.startTime });
 
     send('status', { message: 'Scoring output...' });
 

@@ -10,7 +10,7 @@ interface ActionButtonsProps {
   isHumanizing: boolean;
   hasInput: boolean;
   hasOutput: boolean;
-  activeView: 'output' | 'comparison' | 'analysis';
+  activeView: string;
 }
 
 export default function ActionButtons({

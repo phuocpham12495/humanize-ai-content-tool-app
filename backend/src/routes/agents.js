@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const {
   listAgents, getAgent, createAgent, updateAgent, deleteAgent,
-  addAgentPost, updateAgentPost, deleteAgentPost, getAgentPosts
+  addAgentPost, updateAgentPost, deleteAgentPost, getAgentPosts,
+  addPromptLog
 } = require('../db/database');
 const { generateWithAgentStyle } = require('../services/geminiService');
 
@@ -169,13 +170,14 @@ router.post('/:id/generate/stream', async (req, res) => {
   try {
     const { generateWithAgentStyleStream } = require('../services/geminiService');
     send('status', { message: `Applying ${agent.name}'s writing style...` });
-    const stream = await generateWithAgentStyleStream(text.trim(), agent, settings || {});
+    const { stream, _logMeta } = await generateWithAgentStyleStream(text.trim(), agent, settings || {});
     let fullText = '';
     for await (const chunk of stream) {
       const t = chunk.text();
       fullText += t;
       send('chunk', { text: t });
     }
+    addPromptLog({ ..._logMeta, response: fullText.trim(), durationMs: Date.now() - _logMeta.startTime });
     send('done', { generatedText: fullText.trim() });
     res.end();
   } catch (err) {

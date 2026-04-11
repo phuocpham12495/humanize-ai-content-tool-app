@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { addPromptLog } = require('../db/database');
 
 function resolveImagenModel(modelId) {
   return (typeof modelId === 'string' && modelId.startsWith('imagen-')) ? modelId : 'imagen-4.0-fast-generate-001';
@@ -57,8 +58,11 @@ TASK: ${instruction}
 
 Output ONLY the visual description (2-3 sentences max). No explanation, no preamble.`;
 
+  const startTime = Date.now();
   const result = await model.generateContent(prompt);
-  return result.response.text().trim();
+  const responseText = result.response.text().trim();
+  addPromptLog({ feature: 'image-concept', model: resolvedModel, prompt, response: responseText, durationMs: Date.now() - startTime });
+  return responseText;
 }
 
 /**
@@ -90,8 +94,8 @@ async function callImagen(prompt, aspectRatio = '1:1', imagenModel) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY environment variable is not set');
 
-  const model = resolveImagenModel(imagenModel);
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+  const resolvedImagen = resolveImagenModel(imagenModel);
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${resolvedImagen}:predict?key=${apiKey}`;
 
   const body = {
     instances: [{ prompt }],
@@ -103,6 +107,7 @@ async function callImagen(prompt, aspectRatio = '1:1', imagenModel) {
     }
   };
 
+  const startTime = Date.now();
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -112,14 +117,18 @@ async function callImagen(prompt, aspectRatio = '1:1', imagenModel) {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     const msg = err?.error?.message || `Imagen API error ${res.status}`;
+    addPromptLog({ feature: 'image-generate', model: resolvedImagen, prompt, status: 'error', errorMessage: msg, durationMs: Date.now() - startTime });
     throw new Error(msg);
   }
 
   const data = await res.json();
   const prediction = data?.predictions?.[0];
   if (!prediction?.bytesBase64Encoded) {
+    addPromptLog({ feature: 'image-generate', model: resolvedImagen, prompt, status: 'error', errorMessage: 'No image data returned', durationMs: Date.now() - startTime });
     throw new Error('Imagen API returned no image data');
   }
+
+  addPromptLog({ feature: 'image-generate', model: resolvedImagen, prompt, response: '[image binary data]', durationMs: Date.now() - startTime });
 
   return {
     base64: prediction.bytesBase64Encoded,
@@ -230,8 +239,10 @@ TASK: For each slot, generate:
 Output ONLY valid JSON: an array of ${count} objects with fields "concept" (string) and "caption" (string).
 Example: [{"concept": "...", "caption": "..."}, {"concept": "...", "caption": "..."}]`;
 
+  const startTime = Date.now();
   const result = await model.generateContent(prompt);
   let raw = result.response.text().trim();
+  addPromptLog({ feature: 'image-prompts', model: resolvedGeminiModel, prompt, response: raw, durationMs: Date.now() - startTime });
 
   // Strip markdown code block if present
   raw = raw.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
